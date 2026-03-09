@@ -28,3 +28,4 @@ Thumbs.db
 # Environment
 .env
 local.properties
+.claude/worktrees/
