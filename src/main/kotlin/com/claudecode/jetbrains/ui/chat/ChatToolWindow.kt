@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.ui.chat
 
+import com.claudecode.jetbrains.context.SelectionContextProvider
 import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.cli.AssistantMessageEvent
 import com.claudecode.jetbrains.cli.ClaudeCliManager
@@ -45,7 +46,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val messageList = MessageList(project, this)
-    private val inputPanel = InputPanel(::sendMessage)
+    private val inputPanel = InputPanel(project, ::sendMessage)
+    private val selectionContextProvider = SelectionContextProvider(project, this)
     private val rootPanel = JPanel(BorderLayout()).apply {
         add(messageList, BorderLayout.CENTER)
         add(inputPanel, BorderLayout.SOUTH)
@@ -81,6 +83,18 @@ class ChatToolWindow(private val project: Project) : Disposable {
         // Wire slash command handler
         inputPanel.setSlashCommandHandler(::handleSlashCommand)
 
+        // Wire selection context
+        selectionContextProvider.setOnChangeListener { context ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) {
+                    inputPanel.updateSelectionContext(context)
+                }
+            }
+        }
+        inputPanel.setSelectionToggleHandler { visible ->
+            selectionContextProvider.isSelectionVisible = visible
+        }
+
         // Listen for theme changes
         ApplicationManager.getApplication().messageBus
             .connect(this)
@@ -93,6 +107,14 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     fun focusInput() {
         inputPanel.focus()
+    }
+
+    /**
+     * Inserts text at the current cursor position in the input panel.
+     * Used by InsertFileRefAction to inject @file references.
+     */
+    fun insertTextAtCursor(text: String) {
+        inputPanel.insertTextAtCursor(text)
     }
 
     private fun handleSlashCommand(command: SlashCommand) {

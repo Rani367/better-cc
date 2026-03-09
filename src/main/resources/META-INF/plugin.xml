@@ -42,5 +42,13 @@
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ESCAPE"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ESCAPE"/>
         </action>
+        <action id="ClaudeCode.InsertFileRef"
+                class="com.claudecode.jetbrains.actions.InsertFileRefAction"
+                text="Insert File Reference in Claude"
+                description="Insert @file#line reference into Claude Code prompt">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt K"/>
+        </action>
     </actions>
 </idea-plugin>
