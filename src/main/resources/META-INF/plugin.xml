@@ -18,6 +18,11 @@
         <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.services.ClaudeStateService"/>
+        <statusBarWidgetFactory
+            id="ClaudeCode.StatusBar"
+            implementation="com.claudecode.jetbrains.ui.ClaudeStatusBarWidgetFactory"
+            order="after encodingWidget"/>
         <toolWindow id="Claude Code"
                     anchor="right"
                     icon="/icons/claude.svg"

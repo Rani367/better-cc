@@ -153,6 +153,8 @@ class ClaudeProcess private constructor(
             sessionId: String,
             permissionMode: String? = null,
             mcpConfigPath: String? = null,
+            model: String? = null,
+            thinkingBudgetTokens: Int? = null,
             additionalArgs: List<String> = emptyList()
         ): List<String> {
             val args = mutableListOf(
@@ -169,9 +171,20 @@ class ClaudeProcess private constructor(
                 args.addAll(listOf("--permission-mode", permissionMode))
             }
 
+            if (!model.isNullOrBlank()) {
+                args.addAll(listOf("--model", model))
+            }
+
+            if (thinkingBudgetTokens != null && thinkingBudgetTokens > 0) {
+                args.addAll(
+                    listOf("--thinking-budget", thinkingBudgetTokens.toString())
+                )
+            }
+
             if (mcpConfigPath != null) {
                 args.addAll(listOf(
-                    "--permission-prompt-tool", "mcp__jetbrains_perms__permission_prompt",
+                    "--permission-prompt-tool",
+                    "mcp__jetbrains_perms__permission_prompt",
                     "--mcp-config", mcpConfigPath
                 ))
             }
@@ -201,6 +214,9 @@ class ClaudeProcess private constructor(
             sessionId: String,
             permissionMode: String? = null,
             mcpServerPort: Int? = null,
+            model: String? = null,
+            thinkingBudgetTokens: Int? = null,
+            environmentVariables: Map<String, String> = emptyMap(),
             additionalArgs: List<String> = emptyList()
         ): ClaudeProcess {
             val mcpConfigPath = if (mcpServerPort != null) {
@@ -209,7 +225,11 @@ class ClaudeProcess private constructor(
                 null
             }
 
-            val command = buildCommand(cliPath, sessionId, permissionMode, mcpConfigPath, additionalArgs)
+            val command = buildCommand(
+                cliPath, sessionId, permissionMode,
+                mcpConfigPath, model, thinkingBudgetTokens,
+                additionalArgs
+            )
             logger.info("Starting Claude CLI: ${command.joinToString(" ")}")
 
             val processBuilder = ProcessBuilder(command)
@@ -219,6 +239,11 @@ class ClaudeProcess private constructor(
             // Remove Claude env vars to avoid nested-session detection
             processBuilder.environment().remove("CLAUDECODE")
             processBuilder.environment().remove("CLAUDE_CODE_ENTRYPOINT")
+
+            // Add user-configured environment variables
+            if (environmentVariables.isNotEmpty()) {
+                processBuilder.environment().putAll(environmentVariables)
+            }
 
             val process = processBuilder.start()
             return ClaudeProcess(sessionId, process)

@@ -103,6 +103,60 @@ class ClaudeProcessTest {
     }
 
     @Test
+    fun `buildCommand includes model flag when specified`() {
+        val command = ClaudeProcess.buildCommand(
+            cliPath = "/usr/bin/claude",
+            sessionId = "sess-1",
+            model = "sonnet"
+        )
+        assertTrue(command.contains("--model"))
+        val modelIdx = command.indexOf("--model")
+        assertEquals("sonnet", command[modelIdx + 1])
+    }
+
+    @Test
+    fun `buildCommand omits model flag when blank`() {
+        val command = ClaudeProcess.buildCommand(
+            cliPath = "/usr/bin/claude",
+            sessionId = "sess-1",
+            model = ""
+        )
+        assertFalse(command.contains("--model"))
+    }
+
+    @Test
+    fun `buildCommand includes thinking budget when specified`() {
+        val command = ClaudeProcess.buildCommand(
+            cliPath = "/usr/bin/claude",
+            sessionId = "sess-1",
+            thinkingBudgetTokens = 10000
+        )
+        assertTrue(command.contains("--thinking-budget"))
+        val idx = command.indexOf("--thinking-budget")
+        assertEquals("10000", command[idx + 1])
+    }
+
+    @Test
+    fun `buildCommand omits thinking budget when null`() {
+        val command = ClaudeProcess.buildCommand(
+            cliPath = "/usr/bin/claude",
+            sessionId = "sess-1",
+            thinkingBudgetTokens = null
+        )
+        assertFalse(command.contains("--thinking-budget"))
+    }
+
+    @Test
+    fun `buildCommand omits thinking budget when zero`() {
+        val command = ClaudeProcess.buildCommand(
+            cliPath = "/usr/bin/claude",
+            sessionId = "sess-1",
+            thinkingBudgetTokens = 0
+        )
+        assertFalse(command.contains("--thinking-budget"))
+    }
+
+    @Test
     fun `stderr is captured`() {
         val fakeProcess = ProcessBuilder("bash", "-c", "echo 'error info' >&2; echo '{\"type\":\"system\",\"subtype\":\"init\",\"session_id\":\"s1\"}'")
             .start()

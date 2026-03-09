@@ -24,7 +24,7 @@ Implementation phases are in `claude-jetbrains-phases/`. Follow them in order. F
 - `phase-12-multiple-conversations.md`
 - `phase-13-checkpoints-rewind.md`
 - `phase-14-context-editor-actions.md`
-- `phase-15-toolbar-statusbar.md`
+- `phase-15-toolbar-statusbar.md` — **COMPLETE**
 - `phase-16-settings-page.md`
 - `phase-17-plugin-mcp-management.md`
 - `phase-18-theming-polish.md`

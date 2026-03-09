@@ -1,6 +1,8 @@
 package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.context.SelectionContextProvider
+import com.claudecode.jetbrains.services.ClaudeState
+import com.claudecode.jetbrains.services.ClaudeStateService
 import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.cli.AssistantMessageEvent
 import com.claudecode.jetbrains.cli.ClaudeCliManager
@@ -38,6 +40,7 @@ import kotlinx.coroutines.launch
 import com.intellij.ide.ui.LafManagerListener
 import java.awt.BorderLayout
 import java.util.concurrent.atomic.AtomicReference
+import javax.swing.BoxLayout
 import javax.swing.JPanel
 
 class ChatToolWindow(private val project: Project) : Disposable {
@@ -45,12 +48,22 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private val logger = Logger.getInstance(ChatToolWindow::class.java)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    private val stateService = ClaudeStateService.getInstance(project)
     private val messageList = MessageList(project, this)
     private val inputPanel = InputPanel(project, ::sendMessage)
+    private val toolbarPanel = ToolbarPanel(project, this)
+    private val contextIndicator = ContextIndicator(project, this)
     private val selectionContextProvider = SelectionContextProvider(project, this)
     private val rootPanel = JPanel(BorderLayout()).apply {
+        add(toolbarPanel, BorderLayout.NORTH)
         add(messageList, BorderLayout.CENTER)
-        add(inputPanel, BorderLayout.SOUTH)
+        // South panel: context indicator + input panel
+        val southPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            add(contextIndicator)
+            add(inputPanel)
+        }
+        add(southPanel, BorderLayout.SOUTH)
     }
 
     // Process management
@@ -129,6 +142,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         messageList.addMessage(userMessage)
         inputPanel.setInputEnabled(false)
         messageList.showThinking(true)
+        stateService.setState(ClaudeState.THINKING)
 
         scope.launch {
             try {
@@ -182,11 +196,13 @@ class ChatToolWindow(private val project: Project) : Disposable {
         val sessionManager = SessionManager.getInstance(project)
         val session = sessionManager.createSession()
         currentSessionId = session.id
+        stateService.setSession(session.id)
 
         return try {
             // Start permission MCP server
             val server = PermissionMcpServer()
             server.onPermissionRequest = { request ->
+                stateService.setState(ClaudeState.WAITING_FOR_PERMISSION)
                 ApplicationManager.getApplication().invokeLater {
                     if (!project.isDisposed) {
                         messageList.addPermissionCard(request)
@@ -198,13 +214,21 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
             val settings = ClaudeSettings.getInstance()
             val mode = settings.permissionMode
+            val model = settings.selectedModel
+            val thinkingBudget = settings.thinkingMode.budgetTokens
+
+            if (model.isNotBlank()) {
+                stateService.setActiveModel(model)
+            }
 
             val process = ClaudeProcess.start(
                 cliPath,
                 workingDir,
                 session.id,
                 permissionMode = mode.cliValue,
-                mcpServerPort = server.port
+                mcpServerPort = server.port,
+                model = model,
+                thinkingBudgetTokens = thinkingBudget
             )
             claudeProcess = process
             sessionManager.registerProcess(session.id, process)
@@ -350,7 +374,16 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         is ResultEvent -> {
                             if (event.sessionId != null) {
                                 currentSessionId = event.sessionId
+                                stateService.setSession(event.sessionId)
                             }
+
+                            // Update usage from result event
+                            stateService.updateUsage(
+                                inputTokens = event.usage?.inputTokens,
+                                outputTokens = event.usage?.outputTokens,
+                                costUsd = event.costUsd
+                            )
+                            stateService.setState(ClaudeState.READY)
 
                             val msgId = streamingMessageId
                             streamingMessageId = null
@@ -403,6 +436,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 }
 
             // Flow completed — process ended
+            stateService.setState(ClaudeState.READY)
             if (!project.isDisposed) {
                 val msgId = streamingMessageId
                 streamingMessageId = null
@@ -461,6 +495,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private fun showError(text: String) {
         streamingMessageId = null
         pendingUpdate.set(null)
+        stateService.setState(ClaudeState.READY)
         ApplicationManager.getApplication().invokeLater {
             if (!project.isDisposed) {
                 messageList.showThinking(false)
@@ -475,6 +510,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         val server = permissionServer ?: return
         when (decision) {
             "allow", "allowSession" -> {
+                stateService.setState(ClaudeState.THINKING)
                 val addSessionApproval = decision == "allowSession"
                 val request = server.getOriginalRequest(requestId)
                 if (request != null && isFileModificationTool(request.toolName)) {
@@ -484,7 +520,13 @@ class ChatToolWindow(private val project: Project) : Disposable {
                     server.resolvePermission(requestId, PermissionResponse("allow"))
                 }
             }
-            "deny" -> server.resolvePermission(requestId, PermissionResponse("deny", "User denied permission"))
+            "deny" -> {
+                stateService.setState(ClaudeState.THINKING)
+                server.resolvePermission(
+                    requestId,
+                    PermissionResponse("deny", "User denied permission")
+                )
+            }
         }
     }
 
@@ -525,6 +567,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         claudeProcess = null
         eventCollectorJob?.cancel()
         eventCollectorJob = null
+        stateService.setState(ClaudeState.READY)
 
         // Stop permission server
         permissionServer?.stop()
@@ -545,6 +588,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     override fun dispose() {
         project.putUserData(KEY, null)
+        toolbarPanel.dispose()
+        contextIndicator.dispose()
         destroyProcess()
         scope.cancel()
     }
