@@ -213,6 +213,48 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         codeBlockRenderer?.permissionResponseHandler = handler
     }
 
+    fun setRewindHandler(handler: (String, String) -> Unit) {
+        codeBlockRenderer?.rewindHandler = handler
+    }
+
+    /**
+     * Removes all message DOM elements from the given message ID onwards.
+     */
+    fun removeMessagesFrom(messageId: String) {
+        if (browser != null) {
+            executeJS(
+                "removeMessagesFrom(${jsStringEscape(messageId)})"
+            )
+        }
+    }
+
+    /**
+     * Replaces messages from the given ID with a summary.
+     */
+    fun replaceMessagesWithSummary(
+        messageId: String,
+        summaryText: String
+    ) {
+        if (browser != null) {
+            executeJS(
+                "replaceMessagesWithSummary(" +
+                    "${jsStringEscape(messageId)}, " +
+                    "${jsStringEscape(summaryText)})"
+            )
+        }
+    }
+
+    /**
+     * Shows a badge on the rewind button for the given message.
+     */
+    fun setRewindBadge(messageId: String, fileCount: Int) {
+        if (browser != null) {
+            executeJS(
+                "setRewindBadge(${jsStringEscape(messageId)}, $fileCount)"
+            )
+        }
+    }
+
     private fun formatPermissionArgs(request: PermissionRequest): String {
         val input = request.input
         return when (request.toolName) {

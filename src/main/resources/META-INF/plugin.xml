@@ -18,6 +18,7 @@
         <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.checkpoint.CheckpointManager"/>
         <toolWindow id="Claude Code"
                     anchor="right"
                     icon="/icons/claude.svg"

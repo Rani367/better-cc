@@ -21,6 +21,7 @@ class CodeBlockRenderer(
     private val jsQuery = JBCefJSQuery.create(browser)
 
     var permissionResponseHandler: ((String, String) -> Unit)? = null
+    var rewindHandler: ((String, String) -> Unit)? = null
 
     /**
      * JavaScript code that defines window.sendToKotlin function.
@@ -55,6 +56,11 @@ class CodeBlockRenderer(
                     val requestId = json.get("requestId")?.asString ?: return
                     val decision = json.get("decision")?.asString ?: return
                     permissionResponseHandler?.invoke(requestId, decision)
+                }
+                "rewind" -> {
+                    val messageId = json.get("messageId")?.asString ?: return
+                    val rewindAction = json.get("rewindAction")?.asString ?: return
+                    rewindHandler?.invoke(messageId, rewindAction)
                 }
             }
         } catch (e: Exception) {
