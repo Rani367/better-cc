@@ -2,12 +2,14 @@ package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.context.SelectionContext
 import com.claudecode.jetbrains.settings.ClaudeSettings
+import com.claudecode.jetbrains.settings.ClaudeSettingsChangeListener
 import com.claudecode.jetbrains.settings.PermissionMode
 import com.claudecode.jetbrains.ui.commands.FileMentionEntry
 import com.claudecode.jetbrains.ui.commands.FileMentionPicker
 import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.ui.commands.SlashCommandPalette
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.JBLabel
@@ -143,32 +145,12 @@ class InputPanel(
         add(wrapper, BorderLayout.CENTER)
         border = BorderFactory.createEmptyBorder(4, 8, 8, 8)
 
-        // Enter sends, Shift+Enter inserts newline
-        val enterKey = KeyStroke.getKeyStroke("ENTER")
-        val shiftEnterKey = KeyStroke.getKeyStroke("shift ENTER")
+        // Set up key bindings based on current setting
+        setupKeyBindings()
+
         val upKey = KeyStroke.getKeyStroke("UP")
         val downKey = KeyStroke.getKeyStroke("DOWN")
         val escapeKey = KeyStroke.getKeyStroke("ESCAPE")
-
-        textArea.inputMap.put(enterKey, "send")
-        textArea.actionMap.put("send", object : AbstractAction() {
-            override fun actionPerformed(e: ActionEvent?) {
-                if (palette.isVisible) {
-                    palette.selectCurrent()
-                } else if (filePicker.isVisible) {
-                    filePicker.selectCurrent()
-                } else {
-                    doSend()
-                }
-            }
-        })
-
-        textArea.inputMap.put(shiftEnterKey, "insert-newline")
-        textArea.actionMap.put("insert-newline", object : AbstractAction() {
-            override fun actionPerformed(e: ActionEvent?) {
-                textArea.append("\n")
-            }
-        })
 
         textArea.inputMap.put(upKey, "palette-up")
         textArea.actionMap.put("palette-up", object : AbstractAction() {
@@ -209,6 +191,18 @@ class InputPanel(
             override fun removeUpdate(e: DocumentEvent?) = checkTriggers()
             override fun changedUpdate(e: DocumentEvent?) = checkTriggers()
         })
+
+        // Listen for settings changes to rebind keys
+        ApplicationManager.getApplication().messageBus
+            .connect()
+            .subscribe(
+                ClaudeSettings.SETTINGS_CHANGED,
+                object : ClaudeSettingsChangeListener {
+                    override fun settingsChanged(settings: ClaudeSettings) {
+                        setupKeyBindings()
+                    }
+                }
+            )
     }
 
     fun setInputEnabled(enabled: Boolean) {
@@ -377,7 +371,6 @@ class InputPanel(
         }
 
         if (atIndex < 0) {
-            // Fallback: just append
             textArea.append("@${entry.relativePath} ")
             return
         }
@@ -390,5 +383,56 @@ class InputPanel(
 
         textArea.text = newText
         textArea.caretPosition = (before + replacement).length
+    }
+
+    /**
+     * Configures Enter / Ctrl+Enter key bindings based on the
+     * current useCtrlEnterToSend setting.
+     */
+    private fun setupKeyBindings() {
+        val useCtrlEnter = ClaudeSettings.getInstance().useCtrlEnterToSend
+
+        val enterKey = KeyStroke.getKeyStroke("ENTER")
+        val shiftEnterKey = KeyStroke.getKeyStroke("shift ENTER")
+        val ctrlEnterKey = KeyStroke.getKeyStroke("ctrl ENTER")
+        val metaEnterKey = KeyStroke.getKeyStroke("meta ENTER")
+
+        val sendAction = object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                if (palette.isVisible) {
+                    palette.selectCurrent()
+                } else if (filePicker.isVisible) {
+                    filePicker.selectCurrent()
+                } else {
+                    doSend()
+                }
+            }
+        }
+
+        val newlineAction = object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                textArea.append("\n")
+            }
+        }
+
+        if (useCtrlEnter) {
+            textArea.inputMap.put(enterKey, "insert-newline")
+            textArea.actionMap.put("insert-newline", newlineAction)
+
+            textArea.inputMap.put(ctrlEnterKey, "send")
+            textArea.inputMap.put(metaEnterKey, "send")
+            textArea.actionMap.put("send", sendAction)
+
+            textArea.inputMap.put(shiftEnterKey, "insert-newline")
+        } else {
+            textArea.inputMap.put(enterKey, "send")
+            textArea.actionMap.put("send", sendAction)
+
+            textArea.inputMap.put(shiftEnterKey, "insert-newline")
+            textArea.actionMap.put("insert-newline", newlineAction)
+
+            textArea.inputMap.put(ctrlEnterKey, "send")
+            textArea.inputMap.put(metaEnterKey, "send")
+        }
     }
 }

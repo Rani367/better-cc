@@ -16,6 +16,11 @@
                            displayType="BALLOON"
                            toolWindowId="Claude Code"/>
         <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.claudecode.jetbrains.ui.settings.ClaudeSettingsConfigurable"
+            id="com.claudecode.jetbrains.settings"
+            displayName="Claude Code"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.DiagnosticsProvider"/>
