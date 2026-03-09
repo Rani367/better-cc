@@ -41,15 +41,44 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
     private val fallbackTextArea: JTextArea?
     private val fallbackScrollPane: JScrollPane?
 
-    // Empty state
-    private val emptyLabel = JLabel(
-        "Send a message to start chatting with Claude",
-        SwingConstants.CENTER
-    ).apply {
-        foreground = JBColor.GRAY
-    }
-    private val emptyPanel = JPanel(BorderLayout()).apply {
-        add(emptyLabel, BorderLayout.CENTER)
+    // Empty state (emptyState_07S1Yg) — centered, offset 30px up, with ASCII art
+    @Suppress("SpellCheckingInspection")
+    private val asciiArt = """
+        |     ╭───────╮
+        |    ╱  ●   ●  ╲
+        |   │     ◡     │
+        |    ╲           ╱
+        |     ╰─────────╯
+    """.trimMargin()
+
+    private val emptyPanel = JPanel(java.awt.GridBagLayout()).apply {
+        val gbc = java.awt.GridBagConstraints().apply {
+            anchor = java.awt.GridBagConstraints.CENTER
+            gridx = 0
+            insets = java.awt.Insets(-JBUI.scale(30), 0, 0, 0)
+        }
+
+        // ASCII art
+        gbc.gridy = 0
+        add(JLabel(
+            "<html><pre style='text-align:center;color:#d97757;font-size:12px;'>" +
+                asciiArt.replace("\n", "<br>") + "</pre></html>"
+        ).apply {
+            horizontalAlignment = SwingConstants.CENTER
+        }, gbc)
+
+        // Text
+        gbc.gridy = 1
+        gbc.insets = java.awt.Insets(JBUI.scale(8), 0, 0, 0)
+        add(JLabel(
+            "<html><div style='text-align:center;font-family:monospace;font-size:10px;" +
+                "color:gray;'>What can I help you with?</div></html>"
+        ).apply {
+            horizontalAlignment = SwingConstants.CENTER
+            foreground = JBColor.GRAY
+        }, gbc)
+
+        isOpaque = true
     }
 
     private var hasMessages = false
@@ -377,76 +406,66 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
 
     private fun buildThemeVars(): Map<String, String> {
         val isDark = !JBColor.isBright()
-        return if (isDark) {
-            mapOf(
-                "--bg-primary" to colorToHex(Color(0x2B, 0x2D, 0x30)),
-                "--bg-secondary" to colorToHex(Color(0x38, 0x3A, 0x3D)),
-                "--bg-user" to colorToHex(Color(0x1E, 0x3A, 0x5F)),
-                "--bg-assistant" to colorToHex(Color(0x36, 0x39, 0x3D)),
-                "--bg-error" to colorToHex(Color(0x50, 0x20, 0x20)),
-                "--bg-code" to colorToHex(Color(0x1E, 0x1F, 0x22)),
-                "--text-primary" to colorToHex(Color(0xBC, 0xBC, 0xBC)),
-                "--text-secondary" to colorToHex(Color(0x80, 0x80, 0x80)),
-                "--text-user-name" to colorToHex(Color(0x6B, 0xB8, 0xFF)),
-                "--text-assistant-name" to colorToHex(Color(0xE8, 0xA5, 0x50)),
-                "--text-error-name" to colorToHex(Color(0xFF, 0x6B, 0x6B)),
-                "--border-color" to colorToHex(Color(0x46, 0x48, 0x4A)),
-                "--code-header-bg" to colorToHex(Color(0x38, 0x3A, 0x3D)),
-                "--scrollbar-thumb" to colorToHex(Color(0x55, 0x57, 0x59)),
-                "--link-color" to colorToHex(Color(0x6B, 0xB8, 0xFF)),
-                "--thinking-dot" to colorToHex(Color(0x70, 0x70, 0x70)),
-                "--tool-bg" to colorToHex(Color(0x2F, 0x31, 0x34)),
-                "--tool-border" to colorToHex(Color(0x46, 0x48, 0x4A)),
-                "--tool-header-bg" to colorToHex(Color(0x35, 0x37, 0x3A)),
-                "--tool-read-accent" to colorToHex(Color(0x6B, 0xB8, 0xFF)),
-                "--tool-write-accent" to colorToHex(Color(0xE8, 0xA5, 0x50)),
-                "--tool-bash-accent" to colorToHex(Color(0x6A, 0xC4, 0x6A)),
-                "--tool-other-accent" to colorToHex(Color(0x80, 0x80, 0x80)),
-                "--perm-bg" to colorToHex(Color(0x3A, 0x35, 0x20)),
-                "--perm-border" to colorToHex(Color(0x6B, 0x5B, 0x20)),
-                "--perm-header-bg" to "rgba(255,255,255,0.04)",
-                "--perm-icon-color" to colorToHex(Color(0xE8, 0xC8, 0x50)),
-                "--perm-allowed-bg" to colorToHex(Color(0x1B, 0x3A, 0x1B)),
-                "--perm-allowed-border" to colorToHex(Color(0x4C, 0xAF, 0x50)),
-                "--perm-denied-bg" to colorToHex(Color(0x50, 0x20, 0x20)),
-                "--perm-denied-border" to colorToHex(Color(0xE5, 0x39, 0x35)),
-                "--perm-risk-normal-bg" to colorToHex(Color(0x46, 0x48, 0x4A))
-            )
-        } else {
-            mapOf(
-                "--bg-primary" to "#ffffff",
-                "--bg-secondary" to "#f5f5f5",
-                "--bg-user" to "#dbe9f7",
-                "--bg-assistant" to "#f0f0f0",
-                "--bg-error" to "#fde0e0",
-                "--bg-code" to "#f6f8fa",
-                "--text-primary" to "#1a1a1a",
-                "--text-secondary" to "#666666",
-                "--text-user-name" to "#1a56b0",
-                "--text-assistant-name" to "#c46e00",
-                "--text-error-name" to "#c62828",
-                "--border-color" to "#e0e0e0",
-                "--code-header-bg" to "#e8eaed",
-                "--scrollbar-thumb" to "#c1c1c1",
-                "--link-color" to "#1a56b0",
-                "--thinking-dot" to "#999999",
-                "--tool-bg" to "#f8f9fa",
-                "--tool-border" to "#e0e0e0",
-                "--tool-header-bg" to "#f0f1f3",
-                "--tool-read-accent" to "#1a73e8",
-                "--tool-write-accent" to "#e8a317",
-                "--tool-bash-accent" to "#2e7d32",
-                "--tool-other-accent" to "#757575",
-                "--perm-bg" to "#fef9e7",
-                "--perm-border" to "#d4a017",
-                "--perm-header-bg" to "rgba(0,0,0,0.04)",
-                "--perm-icon-color" to "#d4a017",
-                "--perm-allowed-bg" to "#e8f5e9",
-                "--perm-allowed-border" to "#4caf50",
-                "--perm-denied-bg" to "#fde0e0",
-                "--perm-denied-border" to "#e53935",
-                "--perm-risk-normal-bg" to "#e0e0e0"
-            )
+        // VS Code extension design system colours
+        return buildMap {
+            // Primary colours — extracted from IntelliJ theme
+            put("--app-primary-foreground", resolveColor("Label.foreground", isDark, "#bcbcbc", "#1a1a1a"))
+            put("--app-primary-background", resolveColor("SidePanel.background", isDark, "#2b2d30", "#f5f5f5"))
+            put("--app-secondary-foreground", resolveColor("Label.disabledForeground", isDark, "#808080", "#666666"))
+            put("--app-secondary-background", resolveColor("Editor.background", isDark, "#1e1f22", "#ffffff"))
+            put("--app-input-background", resolveColor("TextField.background", isDark, "#2b2d30", "#ffffff"))
+            put("--app-input-border", resolveColor("Component.borderColor", isDark, "#464648", "#c4c4c4"))
+            put("--app-input-active-border", resolveColor("Component.focusedBorderColor", isDark, "#4e82c5", "#2675bf"))
+            put("--app-tool-background", resolveColor("Editor.background", isDark, "#1e1f22", "#ffffff"))
+            put("--app-button-background", resolveColor("Button.default.startBackground", isDark, "#365880", "#528bff"))
+            put("--app-button-foreground", resolveColor("Button.default.foreground", isDark, "#bbbbbb", "#ffffff"))
+            put("--app-error-foreground", resolveColor("Label.errorForeground", isDark, "#ff6b6b", "#c62828"))
+            put("--app-success-foreground", if (isDark) "#74c991" else "#4caf50")
+            put("--app-warning-accent", "#e5a54b")
+            put("--app-status-busy", "#22c55e")
+            put("--app-status-pending", "#3b82f6")
+            put("--app-claude-orange", "#d97757")
+            put("--app-spinner-foreground", if (isDark) "#d97757" else "#c6613f")
+            put("--app-primary-border-color", resolveColor("Borders.color", isDark, "#464648", "#e0e0e0"))
+            put("--app-link-color", resolveColor("Link.activeForeground", isDark, "#6bb8ff", "#1a56b0"))
+            put("--app-transparent-inner-border", if (isDark) "rgba(255,255,255,0.1)" else "rgba(0,0,0,0.07)")
+            put("--app-ghost-button-hover-background", resolveColor("ActionButton.hoverBackground", isDark, "#4c5052", "#dfdfdf"))
+            put("--app-menu-background", resolveColor("PopupMenu.background", isDark, "#2b2d30", "#f5f5f5"))
+            // Scrollbar
+            put("--scrollbar-thumb", if (isDark) "#555759" else "#c1c1c1")
+            // Monospace font
+            put("--app-monospace-font-family", "\"${monospaceFontFamily()}\", \"JetBrains Mono\", \"Fira Code\", \"Consolas\", monospace")
+            put("--app-monospace-font-size", "${monospaceFontSize()}px")
+            put("--app-monospace-font-size-small", "${(monospaceFontSize() - 2).coerceAtLeast(9)}px")
+        }
+    }
+
+    private fun resolveColor(key: String, isDark: Boolean, darkFallback: String, lightFallback: String): String {
+        return try {
+            val color = JBColor.namedColor(key, if (isDark) Color.GRAY else Color.LIGHT_GRAY)
+            colorToHex(color)
+        } catch (_: Exception) {
+            if (isDark) darkFallback else lightFallback
+        }
+    }
+
+    private fun monospaceFontFamily(): String {
+        return try {
+            com.intellij.openapi.editor.colors.EditorColorsManager.getInstance()
+                .globalScheme
+                .getFont(com.intellij.openapi.editor.colors.EditorFontType.PLAIN)
+                .family
+        } catch (_: Exception) {
+            "JetBrains Mono"
+        }
+    }
+
+    private fun monospaceFontSize(): Int {
+        return try {
+            com.intellij.openapi.editor.colors.EditorColorsManager.getInstance()
+                .globalScheme.editorFontSize
+        } catch (_: Exception) {
+            13
         }
     }
 

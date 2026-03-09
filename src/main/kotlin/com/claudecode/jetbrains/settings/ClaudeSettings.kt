@@ -69,7 +69,8 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         var respectGitIgnore: Boolean = true,
         var hideOnboarding: Boolean = false,
         var environmentVariables: MutableMap<String, String> = mutableMapOf(),
-        var thinkingMode: String = "NORMAL"
+        var thinkingMode: String = "NORMAL",
+        var enableAnimations: Boolean = true
     )
 
     private var state = State()
@@ -144,6 +145,12 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         get() = ThinkingMode.fromName(state.thinkingMode)
         set(value) {
             state.thinkingMode = value.name
+        }
+
+    var enableAnimations: Boolean
+        get() = state.enableAnimations
+        set(value) {
+            state.enableAnimations = value
         }
 
     /**
