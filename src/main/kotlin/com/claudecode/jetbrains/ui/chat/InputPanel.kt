@@ -325,8 +325,10 @@ class InputPanel(
      * Returns the query string (after `@`) or null if no mention is active.
      */
     private fun findActiveMention(text: String): String? {
+        if (text.isEmpty()) return null
+
         val caretPos = try {
-            textArea.caretPosition
+            textArea.caretPosition.coerceAtMost(text.length)
         } catch (_: Exception) {
             text.length
         }

@@ -28,6 +28,7 @@ Implementation phases are in `claude-jetbrains-phases/`. Follow them in order. F
 - `phase-16-settings-page.md` — **COMPLETE**
 - `phase-17-plugin-mcp-management.md` — **COMPLETE**
 - `phase-18-theming-polish.md` — **COMPLETE**
+- `phase-19-ui-excellence.md` — Faithful port of the VS Code extension UI
 
 ## Rules That Will Bite You
 
