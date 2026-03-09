@@ -99,7 +99,16 @@ class ChatToolWindow(private val project: Project) : Disposable {
         if (command.name == "/clear") {
             messageList.clearMessages()
         }
+        if (command.name == "/settings" || command.name == "/config") {
+            openSettings()
+            return
+        }
         sendMessage(command.name)
+    }
+
+    private fun openSettings() {
+        com.intellij.openapi.options.ShowSettingsUtil.getInstance()
+            .showSettingsDialog(project, "Claude Code")
     }
 
     private fun sendMessage(text: String) {
@@ -177,12 +186,17 @@ class ChatToolWindow(private val project: Project) : Disposable {
             val settings = ClaudeSettings.getInstance()
             val mode = settings.permissionMode
 
+            val model = settings.selectedModel
+            val envVars = settings.environmentVariables
+
             val process = ClaudeProcess.start(
                 cliPath,
                 workingDir,
                 session.id,
                 permissionMode = mode.cliValue,
-                mcpServerPort = server.port
+                mcpServerPort = server.port,
+                model = model,
+                environmentVariables = envVars
             )
             claudeProcess = process
             sessionManager.registerProcess(session.id, process)

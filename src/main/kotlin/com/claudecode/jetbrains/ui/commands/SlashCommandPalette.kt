@@ -61,6 +61,7 @@ object SlashCommandRegistry {
         SlashCommand("/sandbox", "Activate sandboxed execution"),
         SlashCommand("/review", "Security review of changes"),
         SlashCommand("/config", "Open configuration settings"),
+        SlashCommand("/settings", "Open plugin settings page"),
         SlashCommand("/login", "Re-authenticate session")
     )
 

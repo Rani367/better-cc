@@ -1,9 +1,11 @@
 package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.settings.ClaudeSettings
+import com.claudecode.jetbrains.settings.ClaudeSettingsChangeListener
 import com.claudecode.jetbrains.settings.PermissionMode
 import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.ui.commands.SlashCommandPalette
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -102,30 +104,12 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
         add(wrapper, BorderLayout.CENTER)
         border = BorderFactory.createEmptyBorder(4, 8, 8, 8)
 
-        // Enter sends, Shift+Enter inserts newline
-        val enterKey = KeyStroke.getKeyStroke("ENTER")
-        val shiftEnterKey = KeyStroke.getKeyStroke("shift ENTER")
+        // Set up key bindings based on current setting
+        setupKeyBindings()
+
         val upKey = KeyStroke.getKeyStroke("UP")
         val downKey = KeyStroke.getKeyStroke("DOWN")
         val escapeKey = KeyStroke.getKeyStroke("ESCAPE")
-
-        textArea.inputMap.put(enterKey, "send")
-        textArea.actionMap.put("send", object : AbstractAction() {
-            override fun actionPerformed(e: ActionEvent?) {
-                if (palette.isVisible) {
-                    palette.selectCurrent()
-                } else {
-                    doSend()
-                }
-            }
-        })
-
-        textArea.inputMap.put(shiftEnterKey, "insert-newline")
-        textArea.actionMap.put("insert-newline", object : AbstractAction() {
-            override fun actionPerformed(e: ActionEvent?) {
-                textArea.append("\n")
-            }
-        })
 
         textArea.inputMap.put(upKey, "palette-up")
         textArea.actionMap.put("palette-up", object : AbstractAction() {
@@ -160,6 +144,18 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
             override fun removeUpdate(e: DocumentEvent?) = checkSlashTrigger()
             override fun changedUpdate(e: DocumentEvent?) = checkSlashTrigger()
         })
+
+        // Listen for settings changes to rebind keys
+        ApplicationManager.getApplication().messageBus
+            .connect()
+            .subscribe(
+                ClaudeSettings.SETTINGS_CHANGED,
+                object : ClaudeSettingsChangeListener {
+                    override fun settingsChanged(settings: ClaudeSettings) {
+                        setupKeyBindings()
+                    }
+                }
+            )
     }
 
     fun setInputEnabled(enabled: Boolean) {
@@ -201,5 +197,58 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
         palette.dismiss()
         textArea.text = ""
         onSlashCommand?.invoke(command)
+    }
+
+    /**
+     * Configures Enter / Ctrl+Enter key bindings based on the
+     * current useCtrlEnterToSend setting.
+     */
+    private fun setupKeyBindings() {
+        val useCtrlEnter = ClaudeSettings.getInstance().useCtrlEnterToSend
+
+        val enterKey = KeyStroke.getKeyStroke("ENTER")
+        val shiftEnterKey = KeyStroke.getKeyStroke("shift ENTER")
+        val ctrlEnterKey = KeyStroke.getKeyStroke("ctrl ENTER")
+        val metaEnterKey = KeyStroke.getKeyStroke("meta ENTER")
+
+        val sendAction = object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                if (palette.isVisible) {
+                    palette.selectCurrent()
+                } else {
+                    doSend()
+                }
+            }
+        }
+
+        val newlineAction = object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                textArea.append("\n")
+            }
+        }
+
+        if (useCtrlEnter) {
+            // Ctrl/Cmd+Enter sends, Enter inserts newline
+            textArea.inputMap.put(enterKey, "insert-newline")
+            textArea.actionMap.put("insert-newline", newlineAction)
+
+            textArea.inputMap.put(ctrlEnterKey, "send")
+            textArea.inputMap.put(metaEnterKey, "send")
+            textArea.actionMap.put("send", sendAction)
+
+            // Shift+Enter also inserts newline (same behavior)
+            textArea.inputMap.put(shiftEnterKey, "insert-newline")
+        } else {
+            // Enter sends, Shift+Enter inserts newline
+            textArea.inputMap.put(enterKey, "send")
+            textArea.actionMap.put("send", sendAction)
+
+            textArea.inputMap.put(shiftEnterKey, "insert-newline")
+            textArea.actionMap.put("insert-newline", newlineAction)
+
+            // Also allow Ctrl/Cmd+Enter to send
+            textArea.inputMap.put(ctrlEnterKey, "send")
+            textArea.inputMap.put(metaEnterKey, "send")
+        }
     }
 }
