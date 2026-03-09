@@ -1,6 +1,8 @@
 package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.ui.commands.SlashCommand
+import com.claudecode.jetbrains.ui.mcp.McpManagerDialog
+import com.claudecode.jetbrains.ui.plugins.PluginManagerDialog
 import com.claudecode.jetbrains.cli.AssistantMessageEvent
 import com.claudecode.jetbrains.cli.ClaudeCliManager
 import com.claudecode.jetbrains.cli.ClaudeProcess
@@ -96,10 +98,27 @@ class ChatToolWindow(private val project: Project) : Disposable {
     }
 
     private fun handleSlashCommand(command: SlashCommand) {
-        if (command.name == "/clear") {
-            messageList.clearMessages()
+        when (command.name) {
+            "/clear" -> {
+                messageList.clearMessages()
+                sendMessage(command.name)
+            }
+            "/mcp" -> {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) {
+                        McpManagerDialog(project).show()
+                    }
+                }
+            }
+            "/plugins" -> {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) {
+                        PluginManagerDialog(project).show()
+                    }
+                }
+            }
+            else -> sendMessage(command.name)
         }
-        sendMessage(command.name)
     }
 
     private fun sendMessage(text: String) {

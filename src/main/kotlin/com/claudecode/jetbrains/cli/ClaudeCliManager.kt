@@ -202,6 +202,54 @@ class ClaudeCliManager(private val project: Project) {
         }
     }
 
+    /**
+     * Runs a Claude CLI subcommand and returns stdout, or null on failure.
+     * Must be called off-EDT (background thread or coroutine with Dispatchers.IO).
+     */
+    fun runCliCommand(args: List<String>, timeout: Long = 15000): String? {
+        val cliPath = resolvedCliPath ?: return null
+        val command = mutableListOf(cliPath)
+        command.addAll(args)
+        return runProcess(command, timeout)
+    }
+
+    /**
+     * Runs a Claude CLI subcommand and returns stdout even on non-zero exit.
+     * Returns a Pair of (exitCode, stdout). Returns null only on exception/timeout.
+     * Must be called off-EDT.
+     */
+    fun runCliCommandWithExitCode(
+        args: List<String>,
+        timeout: Long = 15000
+    ): Pair<Int, String>? {
+        val cliPath = resolvedCliPath ?: return null
+        val command = mutableListOf(cliPath)
+        command.addAll(args)
+        return try {
+            val process = ProcessBuilder(command)
+                .redirectErrorStream(true)
+                .start()
+
+            val outputFuture = CompletableFuture.supplyAsync {
+                process.inputStream.bufferedReader().use { it.readText() }
+            }
+
+            val completed = process.waitFor(timeout, TimeUnit.MILLISECONDS)
+
+            if (!completed) {
+                process.destroyForcibly()
+                logger.warn("Process timed out: ${command.joinToString(" ")}")
+                return null
+            }
+
+            val output = outputFuture.get(1, TimeUnit.SECONDS)
+            Pair(process.exitValue(), output)
+        } catch (e: Exception) {
+            logger.debug("Error running process: ${command.joinToString(" ")}", e)
+            null
+        }
+    }
+
     companion object {
         fun getInstance(project: Project): ClaudeCliManager =
             project.getService(ClaudeCliManager::class.java)
