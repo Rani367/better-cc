@@ -31,6 +31,24 @@ enum class PreferredLocation(val displayName: String) {
 }
 
 /**
+ * Extended thinking mode options. These map to CLI arguments
+ * that control Claude's reasoning depth.
+ */
+enum class ThinkingMode(
+    val displayName: String,
+    val budgetTokens: Int?
+) {
+    NORMAL("Normal", null),
+    THINK_HARD("Think Hard", 10000),
+    ULTRATHINK("Ultrathink", 50000);
+
+    companion object {
+        fun fromName(name: String): ThinkingMode =
+            entries.firstOrNull { it.name == name } ?: NORMAL
+    }
+}
+
+/**
  * Listener interface for settings change notifications.
  */
 interface ClaudeSettingsChangeListener {
@@ -50,7 +68,8 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         var useCtrlEnterToSend: Boolean = false,
         var respectGitIgnore: Boolean = true,
         var hideOnboarding: Boolean = false,
-        var environmentVariables: MutableMap<String, String> = mutableMapOf()
+        var environmentVariables: MutableMap<String, String> = mutableMapOf(),
+        var thinkingMode: String = "NORMAL"
     )
 
     private var state = State()
@@ -119,6 +138,12 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         get() = state.environmentVariables
         set(value) {
             state.environmentVariables = value
+        }
+
+    var thinkingMode: ThinkingMode
+        get() = ThinkingMode.fromName(state.thinkingMode)
+        set(value) {
+            state.thinkingMode = value.name
         }
 
     /**

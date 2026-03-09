@@ -154,6 +154,7 @@ class ClaudeProcess private constructor(
             permissionMode: String? = null,
             mcpConfigPath: String? = null,
             model: String? = null,
+            thinkingBudgetTokens: Int? = null,
             additionalArgs: List<String> = emptyList()
         ): List<String> {
             val args = mutableListOf(
@@ -174,9 +175,16 @@ class ClaudeProcess private constructor(
                 args.addAll(listOf("--model", model))
             }
 
+            if (thinkingBudgetTokens != null && thinkingBudgetTokens > 0) {
+                args.addAll(
+                    listOf("--thinking-budget", thinkingBudgetTokens.toString())
+                )
+            }
+
             if (mcpConfigPath != null) {
                 args.addAll(listOf(
-                    "--permission-prompt-tool", "mcp__jetbrains_perms__permission_prompt",
+                    "--permission-prompt-tool",
+                    "mcp__jetbrains_perms__permission_prompt",
                     "--mcp-config", mcpConfigPath
                 ))
             }
@@ -207,6 +215,7 @@ class ClaudeProcess private constructor(
             permissionMode: String? = null,
             mcpServerPort: Int? = null,
             model: String? = null,
+            thinkingBudgetTokens: Int? = null,
             environmentVariables: Map<String, String> = emptyMap(),
             additionalArgs: List<String> = emptyList()
         ): ClaudeProcess {
@@ -218,7 +227,8 @@ class ClaudeProcess private constructor(
 
             val command = buildCommand(
                 cliPath, sessionId, permissionMode,
-                mcpConfigPath, model, additionalArgs
+                mcpConfigPath, model, thinkingBudgetTokens,
+                additionalArgs
             )
             logger.info("Starting Claude CLI: ${command.joinToString(" ")}")
 

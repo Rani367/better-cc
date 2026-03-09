@@ -26,6 +26,11 @@
         <projectService serviceImplementation="com.claudecode.jetbrains.context.DiagnosticsProvider"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.FileContextProvider"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.ProjectContextProvider"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.services.ClaudeStateService"/>
+        <statusBarWidgetFactory
+            id="ClaudeCode.StatusBar"
+            implementation="com.claudecode.jetbrains.ui.ClaudeStatusBarWidgetFactory"
+            order="after encodingWidget"/>
         <toolWindow id="Claude Code"
                     anchor="right"
                     icon="/icons/claude.svg"
