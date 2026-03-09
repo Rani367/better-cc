@@ -60,6 +60,7 @@ function senderDisplayName(sender) {
         case 'USER': return 'You';
         case 'ASSISTANT': return 'Claude';
         case 'ERROR': return 'Error';
+        case 'SYSTEM': return 'System';
         default: return sender;
     }
 }
@@ -69,6 +70,7 @@ function senderClass(sender) {
         case 'USER': return 'user';
         case 'ASSISTANT': return 'assistant';
         case 'ERROR': return 'error';
+        case 'SYSTEM': return 'system';
         default: return 'assistant';
     }
 }

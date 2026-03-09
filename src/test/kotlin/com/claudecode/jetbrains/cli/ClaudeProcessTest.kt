@@ -9,7 +9,7 @@ class ClaudeProcessTest {
 
     @Test
     fun `buildCommand includes all required flags`() {
-        val command = ClaudeProcess.buildCommand("/usr/local/bin/claude", "sess-123")
+        val command = ClaudeProcess.buildCommand(cliPath = "/usr/local/bin/claude", sessionId = "sess-123")
         assertEquals(
             listOf(
                 "/usr/local/bin/claude",
@@ -27,8 +27,9 @@ class ClaudeProcessTest {
     @Test
     fun `buildCommand appends additional args`() {
         val command = ClaudeProcess.buildCommand(
-            "/usr/bin/claude", "sess-1",
-            listOf("--resume", "old-session")
+            cliPath = "/usr/bin/claude",
+            sessionId = "sess-1",
+            additionalArgs = listOf("--resume", "old-session")
         )
         assertTrue(command.contains("--resume"))
         assertTrue(command.contains("old-session"))
@@ -39,7 +40,7 @@ class ClaudeProcessTest {
     @Test
     fun `buildCommand preserves session id`() {
         val sessionId = "abc-def-123"
-        val command = ClaudeProcess.buildCommand("/bin/claude", sessionId)
+        val command = ClaudeProcess.buildCommand(cliPath = "/bin/claude", sessionId = sessionId)
         val sessionIndex = command.indexOf("--session-id")
         assertEquals(sessionId, command[sessionIndex + 1])
     }

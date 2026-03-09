@@ -89,22 +89,28 @@ class MessageBubble(private val message: ChatMessage) : JPanel(BorderLayout()) {
         private val ASSISTANT_NAME_COLOR = JBColor(Color(0xC4, 0x6E, 0x00), Color(0xE8, 0xA5, 0x50))
         private val ERROR_NAME_COLOR = JBColor(Color(0xC6, 0x28, 0x28), Color(0xFF, 0x6B, 0x6B))
 
+        private val SYSTEM_BG = JBColor(Color(0xF5, 0xF5, 0xF5), Color(0x38, 0x3A, 0x3D))
+        private val SYSTEM_NAME_COLOR = JBColor(Color(0x66, 0x66, 0x66), Color(0x80, 0x80, 0x80))
+
         private fun backgroundForSender(sender: MessageSender): JBColor = when (sender) {
             MessageSender.USER -> USER_BG
             MessageSender.ASSISTANT -> ASSISTANT_BG
             MessageSender.ERROR -> ERROR_BG
+            MessageSender.SYSTEM -> SYSTEM_BG
         }
 
         private fun senderColor(sender: MessageSender): JBColor = when (sender) {
             MessageSender.USER -> USER_NAME_COLOR
             MessageSender.ASSISTANT -> ASSISTANT_NAME_COLOR
             MessageSender.ERROR -> ERROR_NAME_COLOR
+            MessageSender.SYSTEM -> SYSTEM_NAME_COLOR
         }
 
         private fun senderDisplayName(sender: MessageSender): String = when (sender) {
             MessageSender.USER -> "You"
             MessageSender.ASSISTANT -> "Claude"
             MessageSender.ERROR -> "Error"
+            MessageSender.SYSTEM -> "System"
         }
     }
 }

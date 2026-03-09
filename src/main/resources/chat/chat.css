@@ -82,6 +82,15 @@ html, body {
     background: var(--bg-error);
 }
 
+.message-system {
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--text-secondary);
+}
+
+.sender-system {
+    color: var(--text-secondary);
+}
+
 /* Message header */
 .message-header {
     display: flex;

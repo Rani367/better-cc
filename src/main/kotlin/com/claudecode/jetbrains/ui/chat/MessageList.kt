@@ -122,6 +122,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                 MessageSender.USER -> "You: "
                 MessageSender.ASSISTANT -> "Claude: "
                 MessageSender.ERROR -> "Error: "
+                MessageSender.SYSTEM -> "System: "
             }
             fallbackTextArea?.append("$prefix${message.text.trim()}\n\n")
             scrollFallbackToBottom()

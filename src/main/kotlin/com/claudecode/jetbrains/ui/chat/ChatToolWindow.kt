@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.ui.chat
 
+import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.cli.AssistantMessageEvent
 import com.claudecode.jetbrains.cli.ClaudeCliManager
 import com.claudecode.jetbrains.cli.ClaudeProcess
@@ -77,6 +78,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
             handlePermissionResponse(requestId, decision)
         }
 
+        // Wire slash command handler
+        inputPanel.setSlashCommandHandler(::handleSlashCommand)
+
         // Listen for theme changes
         ApplicationManager.getApplication().messageBus
             .connect(this)
@@ -89,6 +93,13 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     fun focusInput() {
         inputPanel.focus()
+    }
+
+    private fun handleSlashCommand(command: SlashCommand) {
+        if (command.name == "/clear") {
+            messageList.clearMessages()
+        }
+        sendMessage(command.name)
     }
 
     private fun sendMessage(text: String) {

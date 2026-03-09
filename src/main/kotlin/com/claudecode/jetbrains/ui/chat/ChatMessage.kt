@@ -6,7 +6,8 @@ import java.util.UUID
 enum class MessageSender {
     USER,
     ASSISTANT,
-    ERROR
+    ERROR,
+    SYSTEM
 }
 
 data class ChatMessage(

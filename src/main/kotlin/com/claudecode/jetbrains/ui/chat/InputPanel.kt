@@ -2,6 +2,8 @@ package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.settings.ClaudeSettings
 import com.claudecode.jetbrains.settings.PermissionMode
+import com.claudecode.jetbrains.ui.commands.SlashCommand
+import com.claudecode.jetbrains.ui.commands.SlashCommandPalette
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -16,16 +18,21 @@ import javax.swing.JButton
 import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.KeyStroke
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) {
 
     private var sendingInProgress = false
+    private var onSlashCommand: ((SlashCommand) -> Unit)? = null
 
     private val textArea = JBTextArea(2, 0).apply {
         lineWrap = true
         wrapStyleWord = true
         border = BorderFactory.createEmptyBorder(4, 8, 4, 8)
     }
+
+    private val palette = SlashCommandPalette(textArea, ::handleCommandSelected)
 
     private val sendButton = JButton("Send").apply {
         addActionListener { doSend() }
@@ -98,11 +105,18 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
         // Enter sends, Shift+Enter inserts newline
         val enterKey = KeyStroke.getKeyStroke("ENTER")
         val shiftEnterKey = KeyStroke.getKeyStroke("shift ENTER")
+        val upKey = KeyStroke.getKeyStroke("UP")
+        val downKey = KeyStroke.getKeyStroke("DOWN")
+        val escapeKey = KeyStroke.getKeyStroke("ESCAPE")
 
         textArea.inputMap.put(enterKey, "send")
         textArea.actionMap.put("send", object : AbstractAction() {
             override fun actionPerformed(e: ActionEvent?) {
-                doSend()
+                if (palette.isVisible) {
+                    palette.selectCurrent()
+                } else {
+                    doSend()
+                }
             }
         })
 
@@ -111,6 +125,40 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
             override fun actionPerformed(e: ActionEvent?) {
                 textArea.append("\n")
             }
+        })
+
+        textArea.inputMap.put(upKey, "palette-up")
+        textArea.actionMap.put("palette-up", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                if (palette.isVisible) {
+                    palette.moveUp()
+                }
+            }
+        })
+
+        textArea.inputMap.put(downKey, "palette-down")
+        textArea.actionMap.put("palette-down", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                if (palette.isVisible) {
+                    palette.moveDown()
+                }
+            }
+        })
+
+        textArea.inputMap.put(escapeKey, "palette-dismiss")
+        textArea.actionMap.put("palette-dismiss", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent?) {
+                if (palette.isVisible) {
+                    palette.dismiss()
+                }
+            }
+        })
+
+        // Document listener for slash command detection
+        textArea.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) = checkSlashTrigger()
+            override fun removeUpdate(e: DocumentEvent?) = checkSlashTrigger()
+            override fun changedUpdate(e: DocumentEvent?) = checkSlashTrigger()
         })
     }
 
@@ -125,11 +173,33 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
 
     fun getTextArea(): JBTextArea = textArea
 
+    fun setSlashCommandHandler(handler: (SlashCommand) -> Unit) {
+        onSlashCommand = handler
+    }
+
     private fun doSend() {
         if (sendingInProgress) return
         val text = textArea.text?.trim() ?: return
         if (text.isEmpty()) return
         textArea.text = ""
         onSend(text)
+    }
+
+    private fun checkSlashTrigger() {
+        val text = textArea.text ?: ""
+        if (text.startsWith("/") && !text.contains("\n")) {
+            if (!palette.isVisible) {
+                palette.show()
+            }
+            palette.updateFilter(text)
+        } else {
+            palette.dismiss()
+        }
+    }
+
+    private fun handleCommandSelected(command: SlashCommand) {
+        palette.dismiss()
+        textArea.text = ""
+        onSlashCommand?.invoke(command)
     }
 }
