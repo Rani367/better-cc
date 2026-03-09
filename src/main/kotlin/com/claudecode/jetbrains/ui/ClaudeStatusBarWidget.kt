@@ -4,19 +4,16 @@ import com.claudecode.jetbrains.services.ClaudeState
 import com.claudecode.jetbrains.services.ClaudeStateListener
 import com.claudecode.jetbrains.services.ClaudeStateService
 import com.claudecode.jetbrains.ui.chat.ChatToolWindow
+import com.claudecode.jetbrains.ui.theme.ClaudeColors
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
 import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.ui.JBColor
 import com.intellij.util.Consumer
-import java.awt.Color
 import java.awt.Component
 import java.awt.event.MouseEvent
-import javax.swing.Icon
 
 /**
  * Factory that registers the Claude Code status bar widget.

@@ -76,11 +76,17 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private val selectionContextProvider =
         SelectionContextProvider(project, this)
 
-    // ── Session header bar ────────────────────────────────────
+    // ── Session header bar (header_aqhumA) ──────────────────────
     private val sessionTitleLabel = JBLabel("New Conversation").apply {
-        font = font.deriveFont(Font.BOLD, 12f)
+        font = font.deriveFont(Font.BOLD, 13f)
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         toolTipText = "Click to browse past conversations"
+        maximumSize = java.awt.Dimension(JBUI.scale(300), Short.MAX_VALUE.toInt())
+    }
+
+    private val sessionChevron = JBLabel("\u25BE").apply {
+        foreground = JBColor.namedColor("Label.disabledForeground", JBColor.GRAY)
+        border = JBUI.Borders.emptyLeft(2)
     }
 
     private val resumedIndicator = JBLabel("Resumed").apply {
@@ -97,7 +103,19 @@ class ChatToolWindow(private val project: Project) : Disposable {
         toolTipText = "New Conversation"
         isBorderPainted = false
         isContentAreaFilled = false
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         addActionListener { startNewConversation() }
+    }
+
+    private val settingsButton = JButton(AllIcons.General.Settings).apply {
+        toolTipText = "Settings"
+        isBorderPainted = false
+        isContentAreaFilled = false
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        addActionListener {
+            com.intellij.openapi.options.ShowSettingsUtil.getInstance()
+                .showSettingsDialog(project, "Claude Code")
+        }
     }
 
     private val headerPanel = JPanel(BorderLayout()).apply {
@@ -105,13 +123,22 @@ class ChatToolWindow(private val project: Project) : Disposable {
             BorderFactory.createMatteBorder(0, 0, 1, 0, JBColor.border()),
             JBUI.Borders.empty(6, 10, 6, 6)
         )
-        val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+        // Left: session button (ghost button style)
+        val sessionButton = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             add(sessionTitleLabel)
+            add(sessionChevron)
             add(resumedIndicator)
         }
-        add(leftPanel, BorderLayout.CENTER)
-        add(newConversationButton, BorderLayout.EAST)
+        add(sessionButton, BorderLayout.CENTER)
+        // Right: action buttons
+        val rightButtons = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(2), 0)).apply {
+            isOpaque = false
+            add(newConversationButton)
+            add(settingsButton)
+        }
+        add(rightButtons, BorderLayout.EAST)
     }
 
     // Onboarding panel (shown to first-time users)

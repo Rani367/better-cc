@@ -1,10 +1,16 @@
-/* chat.js — Functions called from Kotlin via executeJavaScript() */
+/* chat.js — Functions called from Kotlin via executeJavaScript()
+ *
+ * VS Code Extension Faithful Port — Timeline Layout
+ */
 
 // Will be set from Kotlin before page load completes
 var sendToKotlin = null;
 
 // Raw code storage for copy button (avoids HTML entity issues)
 var _codeBlocks = {};
+
+// Track timeline items for line positioning
+var _timelineCount = 0;
 
 // Configure marked with custom renderer
 var renderer = new marked.Renderer();
@@ -76,41 +82,71 @@ function senderClass(sender) {
 }
 
 /**
+ * Update timeline classes on all assistant/error/system messages.
+ * First gets timeline-first, last gets timeline-last, etc.
+ */
+function updateTimelineClasses() {
+    var container = document.getElementById('messages');
+    var timelineItems = container.querySelectorAll(
+        '.message-assistant, .message-error, .message-system, .thinking-indicator'
+    );
+
+    for (var i = 0; i < timelineItems.length; i++) {
+        var item = timelineItems[i];
+        item.classList.remove('timeline-first', 'timeline-last');
+        if (i === 0) item.classList.add('timeline-first');
+        if (i === timelineItems.length - 1) item.classList.add('timeline-last');
+    }
+}
+
+/**
  * Add a finalized message (user messages, errors, or pre-rendered assistant messages).
  */
 function addMessage(id, sender, content) {
     var container = document.getElementById('messages');
     var cls = senderClass(sender);
 
-    var html;
-    if (sender === 'USER') {
-        html = '<p>' + escapeHtml(content) + '</p>';
-    } else {
-        html = renderMarkdown(content);
-    }
+    var div = document.createElement('div');
+    div.id = 'msg-' + id;
 
-    var rewindHtml = '';
     if (sender === 'USER') {
-        rewindHtml =
+        // User message: flat bubble, left-aligned
+        div.className = 'message message-user';
+
+        var rewindHtml =
             '<button class="rewind-btn" title="Rewind to this point" ' +
                 'onclick="showRewindMenu(\'' + escapeHtml(id) + '\', event)">' +
                 rewindIcon() +
             '</button>';
+
+        var isSlashCmd = content.startsWith('/');
+        var bubbleClass = 'user-bubble' + (isSlashCmd ? ' slash-command-message' : '');
+
+        div.innerHTML =
+            '<div class="message-header">' +
+                '<span class="rewind-container">' + rewindHtml + '</span>' +
+            '</div>' +
+            '<div class="' + bubbleClass + '">' + escapeHtml(content) + '</div>';
+    } else if (sender === 'ASSISTANT') {
+        // Assistant message: timeline layout, no bubble
+        div.className = 'message message-assistant';
+        div.innerHTML = '<div class="message-content">' + renderMarkdown(content) + '</div>';
+    } else if (sender === 'ERROR') {
+        div.className = 'message message-error';
+        div.innerHTML = '<div class="message-content">' + escapeHtml(content) + '</div>';
+    } else {
+        // System message
+        div.className = 'message message-system';
+        div.innerHTML = '<div class="message-content">' + renderMarkdown(content) + '</div>';
     }
 
-    var div = document.createElement('div');
-    div.id = 'msg-' + id;
-    div.className = 'message message-' + cls;
-    div.innerHTML =
-        '<div class="message-header">' +
-            '<span class="sender-name sender-' + cls + '">' + senderDisplayName(sender) + '</span>' +
-            '<span class="timestamp">' + formatTimestamp() + '</span>' +
-            (rewindHtml ? '<span class="rewind-container">' + rewindHtml + '</span>' : '') +
-        '</div>' +
-        '<div class="message-content">' + html + '</div>';
-
     container.appendChild(div);
-    postProcessFilePaths(div.querySelector('.message-content'));
+    if (sender !== 'USER') {
+        updateTimelineClasses();
+    }
+    if (sender === 'ASSISTANT' || sender === 'SYSTEM') {
+        postProcessFilePaths(div.querySelector('.message-content'));
+    }
     scrollToBottom();
 }
 
@@ -125,19 +161,15 @@ var _streamAnim = {};
 function updateStreamingMessage(id, markdown) {
     var state = _streamAnim[id];
     if (!state) {
-        // Create the message div
+        // Create the message div — timeline layout
         var container = document.getElementById('messages');
         var div = document.createElement('div');
         div.id = 'msg-' + id;
         div.className = 'message message-assistant streaming';
         div.setAttribute('data-raw', '');
-        div.innerHTML =
-            '<div class="message-header">' +
-                '<span class="sender-name sender-assistant">Claude</span>' +
-                '<span class="timestamp">' + formatTimestamp() + '</span>' +
-            '</div>' +
-            '<div class="message-content"></div>';
+        div.innerHTML = '<div class="message-content"></div>';
         container.appendChild(div);
+        updateTimelineClasses();
 
         state = { target: '', revealed: 0, raf: null };
         _streamAnim[id] = state;
@@ -201,14 +233,13 @@ function finalizeMessage(id) {
         var contentDiv = msg.querySelector('.message-content');
         contentDiv.innerHTML = renderMarkdown(rawMarkdown);
         postProcessFilePaths(contentDiv);
+        updateTimelineClasses();
         scrollToBottom();
     }
 }
 
 /**
  * Lightweight streaming render: full markdown but no syntax highlighting.
- * Swaps the code renderer temporarily to skip hljs (the expensive part).
- * Full highlight.js render + file path detection happens on finalize.
  */
 function renderStreamingText(text) {
     if (!text) return '';
@@ -242,7 +273,10 @@ function showThinking(visible) {
     var el = document.getElementById('thinking');
     if (el) {
         el.style.display = visible ? 'flex' : 'none';
-        if (visible) scrollToBottom();
+        if (visible) {
+            updateTimelineClasses();
+            scrollToBottom();
+        }
     }
 }
 
@@ -260,7 +294,11 @@ function setThemeVars(varsJson) {
     var lightTheme = document.getElementById('highlight-light-theme');
     var darkTheme = document.getElementById('highlight-dark-theme');
     if (lightTheme && darkTheme) {
-        var isDark = vars['--bg-primary'] && isColorDark(vars['--bg-primary']);
+        var isDark = vars['--app-primary-background'] && isColorDark(vars['--app-primary-background']);
+        // Fall back to legacy var
+        if (!isDark && vars['--bg-primary']) {
+            isDark = isColorDark(vars['--bg-primary']);
+        }
         lightTheme.disabled = isDark;
         darkTheme.disabled = !isDark;
     }
@@ -275,6 +313,7 @@ function clearMessages() {
         if (_streamAnim[id].raf) cancelAnimationFrame(_streamAnim[id].raf);
     }
     _streamAnim = {};
+    _timelineCount = 0;
 
     var container = document.getElementById('messages');
     container.innerHTML = '';
@@ -303,17 +342,21 @@ function toolIcon(category) {
 
 function addToolBlock(id, name, category, summary, isRunning) {
     var container = document.getElementById('messages');
-    var catClass = 'tool-' + category.toLowerCase();
 
-    var div = document.createElement('div');
-    div.id = 'tool-' + id;
-    div.className = 'tool-block ' + catClass;
+    // Tool blocks are wrapped in a timeline message
+    var wrapper = document.createElement('div');
+    wrapper.id = 'tool-wrapper-' + id;
+    wrapper.className = 'message message-assistant' + (isRunning ? ' dot-progress' : ' dot-success');
+
+    var inner = document.createElement('div');
+    inner.id = 'tool-' + id;
+    inner.className = 'tool-block';
 
     var statusHtml = isRunning
         ? '<div class="tool-spinner"></div>'
         : '<span class="tool-check">\u2713</span>';
 
-    div.innerHTML =
+    inner.innerHTML =
         '<div class="tool-header" onclick="toggleToolBlock(\'' + escapeHtml(id) + '\')">' +
             '<span class="tool-icon">' + toolIcon(category) + '</span>' +
             '<span class="tool-name">' + escapeHtml(name) + '</span>' +
@@ -323,7 +366,9 @@ function addToolBlock(id, name, category, summary, isRunning) {
         '</div>' +
         '<div class="tool-body"><pre></pre></div>';
 
-    container.appendChild(div);
+    wrapper.appendChild(inner);
+    container.appendChild(wrapper);
+    updateTimelineClasses();
     scrollToBottom();
 }
 
@@ -340,13 +385,45 @@ function updateToolBlock(id, summary, isRunning) {
             ? '<div class="tool-spinner"></div>'
             : '<span class="tool-check">\u2713</span>';
     }
+
+    // Update dot class on wrapper
+    var wrapper = document.getElementById('tool-wrapper-' + id);
+    if (wrapper) {
+        wrapper.classList.remove('dot-progress', 'dot-success', 'dot-failure');
+        wrapper.classList.add(isRunning ? 'dot-progress' : 'dot-success');
+    }
+
     scrollToBottom();
 }
 
 function setToolBlockBody(id, text) {
     var el = document.getElementById('tool-' + id);
     if (!el) return;
-    var pre = el.querySelector('.tool-body pre');
+
+    // Try to parse as JSON and show as grid
+    var bodyEl = el.querySelector('.tool-body');
+    try {
+        var parsed = JSON.parse(text);
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            var gridHtml = '<div class="tool-body-grid">';
+            var keys = Object.keys(parsed);
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                var val = typeof parsed[key] === 'string' ? parsed[key] : JSON.stringify(parsed[key], null, 2);
+                gridHtml += '<div class="tool-body-row">' +
+                    '<div class="tool-body-row-label">' + escapeHtml(key) + '</div>' +
+                    '<div class="tool-body-row-content">' + escapeHtml(val) + '</div>' +
+                '</div>';
+            }
+            gridHtml += '</div>';
+            bodyEl.innerHTML = gridHtml;
+            return;
+        }
+    } catch (e) {
+        // Not JSON, fall through to plain text
+    }
+
+    var pre = bodyEl.querySelector('pre');
     if (pre) pre.textContent = text;
 }
 
@@ -367,6 +444,11 @@ function permissionIcon() {
 function addPermissionCard(requestId, toolName, category, argumentsSummary, riskLevel) {
     var container = document.getElementById('messages');
 
+    // Permission cards are wrapped in a timeline message
+    var wrapper = document.createElement('div');
+    wrapper.id = 'perm-wrapper-' + requestId;
+    wrapper.className = 'message message-assistant dot-warning';
+
     var div = document.createElement('div');
     div.id = 'perm-' + requestId;
     div.className = 'permission-card permission-pending';
@@ -375,25 +457,36 @@ function addPermissionCard(requestId, toolName, category, argumentsSummary, risk
     var riskLabel = riskLevel === 'high' ? 'High Risk' : 'Normal';
 
     div.innerHTML =
-        '<div class="perm-header">' +
-            '<span class="perm-icon">' + permissionIcon() + '</span>' +
-            '<span class="perm-title">Permission Required</span>' +
-            '<span class="risk-badge ' + riskClass + '">' + riskLabel + '</span>' +
-        '</div>' +
-        '<div class="perm-body">' +
-            '<div class="perm-tool-name">' +
-                '<span class="tool-icon">' + toolIcon(category) + '</span>' +
-                escapeHtml(toolName) +
+        '<div class="perm-content">' +
+            '<div class="perm-header">' +
+                '<span class="perm-icon">' + permissionIcon() + '</span>' +
+                '<span class="perm-title">Permission Required</span>' +
+                '<span class="risk-badge ' + riskClass + '">' + riskLabel + '</span>' +
             '</div>' +
-            (argumentsSummary ? '<pre class="perm-args">' + escapeHtml(argumentsSummary) + '</pre>' : '') +
-        '</div>' +
-        '<div class="perm-actions">' +
-            '<button class="perm-btn perm-allow" onclick="respondPermission(\'' + escapeHtml(requestId) + '\', \'allow\')">Allow</button>' +
-            '<button class="perm-btn perm-allow-session" onclick="respondPermission(\'' + escapeHtml(requestId) + '\', \'allowSession\')">Allow for Session</button>' +
-            '<button class="perm-btn perm-deny" onclick="respondPermission(\'' + escapeHtml(requestId) + '\', \'deny\')">Deny</button>' +
+            '<div class="perm-body">' +
+                '<div class="perm-tool-name">' +
+                    '<span class="tool-icon">' + toolIcon(category) + '</span>' +
+                    escapeHtml(toolName) +
+                '</div>' +
+                (argumentsSummary ? '<pre class="perm-args">' + escapeHtml(argumentsSummary) + '</pre>' : '') +
+            '</div>' +
+            '<div class="perm-actions">' +
+                '<button class="perm-btn focused" onclick="respondPermission(\'' + escapeHtml(requestId) + '\', \'allow\')">' +
+                    '<span class="shortcut-num">1</span> Allow' +
+                '</button>' +
+                '<button class="perm-btn" onclick="respondPermission(\'' + escapeHtml(requestId) + '\', \'allowSession\')">' +
+                    '<span class="shortcut-num">2</span> Allow for Session' +
+                '</button>' +
+                '<button class="perm-btn" onclick="respondPermission(\'' + escapeHtml(requestId) + '\', \'deny\')">' +
+                    '<span class="shortcut-num">3</span> Deny' +
+                '</button>' +
+            '</div>' +
+            '<div class="keyboard-hints">Press 1-3 to select</div>' +
         '</div>';
 
-    container.appendChild(div);
+    wrapper.appendChild(div);
+    container.appendChild(wrapper);
+    updateTimelineClasses();
     scrollToBottom();
 }
 
@@ -412,8 +505,17 @@ function respondPermission(requestId, decision) {
     var isAllowed = decision === 'allow' || decision === 'allowSession';
     el.classList.add(isAllowed ? 'permission-allowed' : 'permission-denied');
 
+    // Update dot colour on wrapper
+    var wrapper = document.getElementById('perm-wrapper-' + requestId);
+    if (wrapper) {
+        wrapper.classList.remove('dot-warning', 'dot-progress');
+        wrapper.classList.add(isAllowed ? 'dot-success' : 'dot-failure');
+    }
+
     // Replace buttons with status text
     var actionsEl = el.querySelector('.perm-actions');
+    var hintsEl = el.querySelector('.keyboard-hints');
+    if (hintsEl) hintsEl.remove();
     if (actionsEl) {
         var statusClass = isAllowed ? 'perm-status-allowed' : 'perm-status-denied';
         var statusText = isAllowed ? 'Allowed' : 'Denied';
@@ -562,6 +664,42 @@ function isColorDark(color) {
     var b = parseInt(hex.substr(4, 2), 16);
     var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance < 0.5;
+}
+
+// ── Error Banner ─────────────────────────────────────────────────
+
+function showErrorBanner(message) {
+    dismissErrorBanner();
+    var banner = document.createElement('div');
+    banner.id = 'error-banner';
+    banner.className = 'error-banner';
+    banner.innerHTML =
+        '<div class="error-message">' + escapeHtml(message) + '</div>' +
+        '<button class="error-dismiss" onclick="dismissErrorBanner()">\u00D7</button>';
+    // Insert at top of body
+    document.body.insertBefore(banner, document.body.firstChild);
+}
+
+function dismissErrorBanner() {
+    var existing = document.getElementById('error-banner');
+    if (existing) existing.remove();
+}
+
+// ── Drop Overlay ─────────────────────────────────────────────────
+
+function showDropOverlay(visible) {
+    var existing = document.getElementById('drop-overlay');
+    if (visible) {
+        if (!existing) {
+            var overlay = document.createElement('div');
+            overlay.id = 'drop-overlay';
+            overlay.className = 'drop-overlay';
+            overlay.innerHTML = '<div class="drop-overlay-label">Drop files to add</div>';
+            document.body.appendChild(overlay);
+        }
+    } else {
+        if (existing) existing.remove();
+    }
 }
 
 // ── Rewind / Checkpoint ──────────────────────────────────────────
@@ -719,6 +857,7 @@ function removeMessagesFrom(messageId) {
         }
         container.removeChild(toRemove[j]);
     }
+    updateTimelineClasses();
 }
 
 /**
@@ -732,14 +871,11 @@ function replaceMessagesWithSummary(messageId, summaryText) {
     var div = document.createElement('div');
     div.className = 'message message-system';
     div.innerHTML =
-        '<div class="message-header">' +
-            '<span class="sender-name sender-system">System</span>' +
-            '<span class="timestamp">' + formatTimestamp() + '</span>' +
-        '</div>' +
         '<div class="message-content">' +
             renderMarkdown(summaryText) +
         '</div>';
     container.appendChild(div);
+    updateTimelineClasses();
     scrollToBottom();
 }
 

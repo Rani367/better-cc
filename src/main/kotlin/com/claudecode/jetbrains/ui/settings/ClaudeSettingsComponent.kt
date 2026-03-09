@@ -123,6 +123,14 @@ class ClaudeSettingsComponent {
             "new users."
     }
 
+    val enableAnimationsCheckbox = JBCheckBox(
+        "Enable animations"
+    ).apply {
+        toolTipText = "Enable fade-in, blink, and transition " +
+            "animations in the chat UI."
+        isSelected = true
+    }
+
     // Environment variables table
     private val envTableModel = object : DefaultTableModel(
         arrayOf("Variable", "Value"), 0
@@ -218,6 +226,7 @@ class ClaudeSettingsComponent {
         addCheckbox(formPanel, gbc, row++, useCtrlEnterCheckbox)
         addCheckbox(formPanel, gbc, row++, respectGitIgnoreCheckbox)
         addCheckbox(formPanel, gbc, row++, hideOnboardingCheckbox)
+        addCheckbox(formPanel, gbc, row++, enableAnimationsCheckbox)
 
         // Environment variables label
         gbc.gridx = 0

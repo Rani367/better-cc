@@ -36,6 +36,7 @@ class ClaudeSettingsConfigurable : Configurable {
             c.useCtrlEnterCheckbox.isSelected != s.useCtrlEnterToSend ||
             c.respectGitIgnoreCheckbox.isSelected != s.respectGitIgnore ||
             c.hideOnboardingCheckbox.isSelected != s.hideOnboarding ||
+            c.enableAnimationsCheckbox.isSelected != s.enableAnimations ||
             c.getEnvironmentVariables() != s.environmentVariables.toMap()
     }
 
@@ -53,6 +54,7 @@ class ClaudeSettingsConfigurable : Configurable {
         s.useCtrlEnterToSend = c.useCtrlEnterCheckbox.isSelected
         s.respectGitIgnore = c.respectGitIgnoreCheckbox.isSelected
         s.hideOnboarding = c.hideOnboardingCheckbox.isSelected
+        s.enableAnimations = c.enableAnimationsCheckbox.isSelected
         s.environmentVariables = c.getEnvironmentVariables().toMutableMap()
 
         s.fireSettingsChanged()
@@ -70,6 +72,7 @@ class ClaudeSettingsConfigurable : Configurable {
         c.useCtrlEnterCheckbox.isSelected = s.useCtrlEnterToSend
         c.respectGitIgnoreCheckbox.isSelected = s.respectGitIgnore
         c.hideOnboardingCheckbox.isSelected = s.hideOnboarding
+        c.enableAnimationsCheckbox.isSelected = s.enableAnimations
         c.setEnvironmentVariables(s.environmentVariables)
     }
 
@@ -89,6 +92,7 @@ class ClaudeSettingsConfigurable : Configurable {
         c.useCtrlEnterCheckbox.isSelected = defaults.useCtrlEnterToSend
         c.respectGitIgnoreCheckbox.isSelected = defaults.respectGitIgnore
         c.hideOnboardingCheckbox.isSelected = defaults.hideOnboarding
+        c.enableAnimationsCheckbox.isSelected = defaults.enableAnimations
         c.setEnvironmentVariables(defaults.environmentVariables)
     }
 }

@@ -1,30 +1,61 @@
+/* ================================================================
+   Claude Code JetBrains Plugin — VS Code Extension Faithful Port
+   ================================================================
+   All values below mirror the VS Code extension's webview/index.css.
+   CSS custom properties are set dynamically from Kotlin theme code.
+   ================================================================ */
+
 :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --bg-user: #dbe9f7;
-    --bg-assistant: #f0f0f0;
-    --bg-error: #fde0e0;
-    --bg-code: #f6f8fa;
-    --text-primary: #1a1a1a;
-    --text-secondary: #666666;
-    --text-user-name: #1a56b0;
-    --text-assistant-name: #c46e00;
-    --text-error-name: #c62828;
-    --border-color: #e0e0e0;
-    --code-header-bg: #e8eaed;
+    /* Colours — overridden at runtime via setThemeVars() */
+    --app-primary-foreground: #1a1a1a;
+    --app-primary-background: #f5f5f5;
+    --app-secondary-foreground: #666666;
+    --app-secondary-background: #ffffff;
+    --app-input-background: #ffffff;
+    --app-input-border: #c4c4c4;
+    --app-input-active-border: #2675bf;
+    --app-tool-background: #ffffff;
+    --app-button-background: #528bff;
+    --app-button-foreground: #ffffff;
+    --app-error-foreground: #c62828;
+    --app-success-foreground: #4caf50;
+    --app-warning-accent: #e5a54b;
+    --app-status-busy: #22c55e;
+    --app-status-pending: #3b82f6;
+    --app-claude-orange: #d97757;
+    --app-spinner-foreground: #d97757;
+    --app-primary-border-color: #e0e0e0;
+    --app-link-color: #1a56b0;
+    --app-transparent-inner-border: rgba(0,0,0,0.07);
+    --app-ghost-button-hover-background: #dfdfdf;
+    --app-menu-background: #f5f5f5;
+
+    /* Spacing */
+    --app-spacing-small: 4px;
+    --app-spacing-medium: 8px;
+    --app-spacing-large: 12px;
+    --app-spacing-xlarge: 16px;
+
+    /* Corner radii */
+    --corner-radius-small: 4px;
+    --corner-radius-medium: 6px;
+    --corner-radius-large: 8px;
+
+    /* Code/monospace */
+    --app-monospace-font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+    --app-monospace-font-size: 13px;
+    --app-monospace-font-size-small: 11px;
+
+    /* Legacy vars mapped for existing code-block styles */
+    --bg-code: var(--app-tool-background);
+    --code-header-bg: var(--app-primary-border-color);
+    --border-color: var(--app-primary-border-color);
+    --text-primary: var(--app-primary-foreground);
+    --text-secondary: var(--app-secondary-foreground);
     --scrollbar-thumb: #c1c1c1;
-    --scrollbar-track: transparent;
-    --link-color: #1a56b0;
-    --thinking-dot: #999999;
-    --tool-bg: #f8f9fa;
-    --tool-border: #e0e0e0;
-    --tool-header-bg: #f0f1f3;
-    --tool-read-accent: #1a73e8;
-    --tool-write-accent: #e8a317;
-    --tool-bash-accent: #2e7d32;
-    --tool-other-accent: #757575;
 }
 
+/* ── Reset ──────────────────────────────────────────────────── */
 * {
     margin: 0;
     padding: 0;
@@ -37,14 +68,36 @@ html, body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-size: 13px;
     line-height: 1.5;
-    color: var(--text-primary);
-    background: var(--bg-primary);
+    color: var(--app-primary-foreground);
+    background: var(--app-primary-background);
 }
 
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+@keyframes tool-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Messages Container (messagesContainer_07S1Yg) ──────────── */
 #messages {
-    padding: 8px;
+    padding: 20px 20px 40px;
     overflow-y: auto;
+    overflow-x: hidden;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--app-primary-background);
+    position: relative;
 }
 
 #messages::-webkit-scrollbar {
@@ -52,7 +105,7 @@ html, body {
 }
 
 #messages::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
+    background: transparent;
 }
 
 #messages::-webkit-scrollbar-thumb {
@@ -60,71 +113,157 @@ html, body {
     border-radius: 3px;
 }
 
-/* Message container */
+/* ── Gradient Overlay (messageGradient_07S1Yg) ──────────────── */
+.message-gradient {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 150px;
+    background: linear-gradient(to bottom, transparent, var(--app-primary-background));
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* ── Base Message ───────────────────────────────────────────── */
 .message {
-    margin-bottom: 8px;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 8px 0;
     max-width: 100%;
     overflow-wrap: break-word;
     word-wrap: break-word;
+    min-width: 0;
 }
 
+.message:first-child {
+    padding-top: 0;
+}
+
+/* ── User Messages (userMessageContainer_07S1Yg) ────────────── */
 .message-user {
-    background: var(--bg-user);
+    display: inline-block;
+    position: relative;
+    align-items: flex-start;
+    margin-left: 0;
+    margin-top: 4px;
 }
 
-.message-assistant {
-    background: var(--bg-assistant);
+.message-user:first-child {
+    margin-top: 0;
 }
 
-.message-error {
-    background: var(--bg-error);
+.user-bubble {
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-medium);
+    background: var(--app-input-background);
+    display: inline-block;
+    overflow: hidden;
+    user-select: text;
+    max-width: 100%;
+    padding: 4px 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--app-primary-foreground);
 }
 
-.message-system {
-    background: var(--bg-secondary);
-    border-left: 3px solid var(--text-secondary);
+.slash-command-message {
+    font-family: var(--app-monospace-font-family);
+    font-size: 0.9em;
 }
 
-.sender-system {
-    color: var(--text-secondary);
-}
-
-/* Message header */
+/* ── Message Header (for user messages with rewind) ─────────── */
 .message-header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 6px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
+    min-width: 0;
+    flex-wrap: nowrap;
 }
 
 .sender-name {
-    font-weight: 600;
-    font-size: 12px;
-}
-
-.sender-user {
-    color: var(--text-user-name);
-}
-
-.sender-assistant {
-    color: var(--text-assistant-name);
-}
-
-.sender-error {
-    color: var(--text-error-name);
+    display: none;  /* Hidden in new design — timeline uses dots */
 }
 
 .timestamp {
-    color: var(--text-secondary);
-    font-size: 11px;
+    display: none;  /* Hidden — VS Code extension doesn't show timestamps */
 }
 
-/* Message content - markdown */
+/* ── Assistant Messages — Timeline Layout ───────────────────── */
+.message-assistant {
+    position: relative;
+    padding-left: 30px;
+    user-select: text;
+    align-items: flex-start;
+    background: none;
+}
+
+/* Timeline dot (:before) */
+.message-assistant::before {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--app-secondary-foreground);
+    left: 9px;
+    top: 15px;
+    z-index: 1;
+}
+
+/* Timeline vertical line (:after) */
+.message-assistant::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    background: var(--app-primary-border-color);
+    left: 12px;
+    top: 0;
+    bottom: 0;
+}
+
+/* First timeline item: line starts below the dot */
+.message-assistant.timeline-first::after {
+    top: 18px;
+}
+
+/* Last timeline item: short line (just past the dot) */
+.message-assistant.timeline-last::after {
+    height: 18px;
+    bottom: auto;
+}
+
+/* Single item (first AND last): no line */
+.message-assistant.timeline-first.timeline-last::after {
+    display: none;
+}
+
+/* Dot colour variants */
+.message-assistant.dot-success::before {
+    background: #74c991;
+}
+
+.message-assistant.dot-failure::before {
+    background: #c74e39;
+}
+
+.message-assistant.dot-warning::before {
+    background: #e1c08d;
+}
+
+.message-assistant.dot-progress::before {
+    background: var(--app-secondary-foreground);
+    animation: blink 1s linear infinite;
+}
+
+/* ── Message Content — No Bubbles on Assistant ──────────────── */
 .message-content {
     font-size: 13px;
     line-height: 1.6;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .message-content p {
@@ -154,14 +293,14 @@ html, body {
 .message-content h3 { font-size: 1.1em; }
 
 .message-content blockquote {
-    border-left: 3px solid var(--border-color);
+    border-left: 3px solid var(--app-primary-border-color);
     padding-left: 12px;
     margin: 8px 0;
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
 }
 
 .message-content a {
-    color: var(--link-color);
+    color: var(--app-link-color);
     text-decoration: none;
 }
 
@@ -169,21 +308,22 @@ html, body {
     text-decoration: underline;
 }
 
-/* Inline code */
+/* ── Inline code ────────────────────────────────────────────── */
 .message-content code {
-    background: var(--bg-code);
+    background: var(--app-tool-background);
     padding: 1px 4px;
     border-radius: 3px;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
-    font-size: 12px;
+    font-family: var(--app-monospace-font-family);
+    font-size: var(--app-monospace-font-size-small);
 }
 
-/* Code blocks */
+/* ── Code blocks ────────────────────────────────────────────── */
 .code-block {
     margin: 8px 0;
-    border-radius: 6px;
+    border-radius: var(--corner-radius-medium);
     overflow: hidden;
-    border: 1px solid var(--border-color);
+    border: 0.5px solid var(--app-input-border);
+    background: var(--app-tool-background);
 }
 
 .code-header {
@@ -191,43 +331,49 @@ html, body {
     justify-content: space-between;
     align-items: center;
     padding: 4px 12px;
-    background: var(--code-header-bg);
-    border-bottom: 1px solid var(--border-color);
+    background: var(--app-tool-background);
+    border-bottom: 0.5px solid var(--app-input-border);
 }
 
 .code-language {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
     font-weight: 500;
     text-transform: lowercase;
 }
 
 .copy-button {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 2px 8px;
+    background: var(--app-secondary-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-small);
+    padding: var(--app-spacing-small);
     font-size: 11px;
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
     cursor: pointer;
-    transition: background 0.15s, color 0.15s;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.code-block:hover .copy-button {
+    opacity: 1;
 }
 
 .copy-button:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
+    background: var(--app-ghost-button-hover-background);
+    color: var(--app-primary-foreground);
 }
 
 .copy-button.copied {
-    color: var(--tool-bash-accent);
-    border-color: var(--tool-bash-accent);
+    color: var(--app-success-foreground);
+    border-color: var(--app-success-foreground);
+    opacity: 1;
 }
 
 .code-block pre {
     margin: 0;
     padding: 12px;
     overflow-x: auto;
-    background: var(--bg-code);
+    background: var(--app-tool-background);
 }
 
 .code-block pre::-webkit-scrollbar {
@@ -243,14 +389,14 @@ html, body {
     background: none;
     padding: 0;
     border-radius: 0;
-    font-size: 12px;
+    font-size: var(--app-monospace-font-size-small);
     line-height: 1.5;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", "Monaco", monospace;
+    font-family: var(--app-monospace-font-family);
 }
 
-/* File path links */
+/* ── File path links ────────────────────────────────────────── */
 .file-path {
-    color: var(--link-color);
+    color: var(--app-link-color);
     cursor: pointer;
     text-decoration: underline;
     text-decoration-style: dotted;
@@ -260,96 +406,28 @@ html, body {
     text-decoration-style: solid;
 }
 
-/* Thinking indicator */
-.thinking-indicator {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 8px 12px;
-}
-
-.thinking-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--thinking-dot);
-    animation: thinking-bounce 1.4s infinite ease-in-out both;
-}
-
-.thinking-dot:nth-child(1) { animation-delay: -0.32s; }
-.thinking-dot:nth-child(2) { animation-delay: -0.16s; }
-.thinking-dot:nth-child(3) { animation-delay: 0s; }
-
-@keyframes thinking-bounce {
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-    40% { transform: scale(1.0); opacity: 1.0; }
-}
-
-/* Streaming cursor */
-.streaming .message-content::after {
-    content: '\25AE';
-    animation: blink 1s step-end infinite;
-    color: var(--text-secondary);
-    margin-left: 2px;
-}
-
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-}
-
-/* Tables */
-.message-content table {
-    border-collapse: collapse;
-    margin: 8px 0;
-    width: 100%;
-}
-
-.message-content th, .message-content td {
-    border: 1px solid var(--border-color);
-    padding: 4px 8px;
-    text-align: left;
-}
-
-.message-content th {
-    background: var(--bg-secondary);
-    font-weight: 600;
-}
-
-/* Horizontal rule */
-.message-content hr {
-    border: none;
-    border-top: 1px solid var(--border-color);
-    margin: 12px 0;
-}
-
-/* Tool use blocks */
+/* ── Tool Use Blocks (toolSummary_ZUQaOA / toolBody_ZUQaOA) ── */
 .tool-block {
-    margin: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--tool-border);
-    border-left: 3px solid var(--tool-other-accent);
-    background: var(--tool-bg);
+    margin: 8px 0;
+    border-radius: 5px;
+    border: 0.5px solid var(--app-input-border);
+    background: var(--app-tool-background);
     overflow: hidden;
+    max-width: 100%;
 }
-
-.tool-block.tool-read { border-left-color: var(--tool-read-accent); }
-.tool-block.tool-write { border-left-color: var(--tool-write-accent); }
-.tool-block.tool-bash { border-left-color: var(--tool-bash-accent); }
-.tool-block.tool-other { border-left-color: var(--tool-other-accent); }
 
 .tool-header {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    background: var(--tool-header-bg);
+    gap: 4px;
+    padding: 4px;
     cursor: pointer;
     user-select: none;
+    line-height: 1.5;
 }
 
 .tool-header:hover {
-    filter: brightness(0.97);
+    background: var(--app-ghost-button-hover-background);
 }
 
 .tool-icon {
@@ -366,27 +444,34 @@ html, body {
     height: 14px;
 }
 
-.tool-read .tool-icon svg { color: var(--tool-read-accent); }
-.tool-write .tool-icon svg { color: var(--tool-write-accent); }
-.tool-bash .tool-icon svg { color: var(--tool-bash-accent); }
-.tool-other .tool-icon svg { color: var(--tool-other-accent); }
-
+/* Tool name — bold, 4px right margin */
 .tool-name {
-    font-weight: 600;
-    font-size: 12px;
-    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--app-primary-foreground);
     flex-shrink: 0;
+    margin-right: 4px;
 }
 
+/* Tool summary — monospace, link colour for paths */
 .tool-summary {
-    font-size: 12px;
-    color: var(--text-secondary);
+    font-size: 0.85em;
+    color: var(--app-link-color);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
     min-width: 0;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+    font-family: var(--app-monospace-font-family);
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    -webkit-line-clamp: 2;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+}
+
+.tool-summary.plain-text {
+    color: var(--app-secondary-foreground);
 }
 
 .tool-status {
@@ -401,18 +486,14 @@ html, body {
 .tool-spinner {
     width: 12px;
     height: 12px;
-    border: 2px solid var(--border-color);
-    border-top-color: var(--text-secondary);
+    border: 2px solid var(--app-primary-border-color);
+    border-top-color: var(--app-spinner-foreground);
     border-radius: 50%;
     animation: tool-spin 0.8s linear infinite;
 }
 
-@keyframes tool-spin {
-    to { transform: rotate(360deg); }
-}
-
 .tool-check {
-    color: var(--tool-bash-accent);
+    color: var(--app-success-foreground);
     font-size: 14px;
     line-height: 1;
 }
@@ -424,7 +505,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
     transition: transform 0.15s;
     font-size: 10px;
 }
@@ -433,54 +514,149 @@ html, body {
     transform: rotate(90deg);
 }
 
+/* ── Tool Body Grid (toolBodyGrid_ZUQaOA) ───────────────────── */
 .tool-body {
     display: none;
-    padding: 8px 10px;
-    border-top: 1px solid var(--tool-border);
+    border-top: 0.5px solid var(--app-input-border);
 }
 
 .tool-block.expanded .tool-body {
     display: block;
 }
 
+.tool-body-grid {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+}
+
+.tool-body-row {
+    display: contents;
+}
+
+.tool-body-row + .tool-body-row .tool-body-row-label,
+.tool-body-row + .tool-body-row .tool-body-row-content {
+    border-top: 0.5px solid var(--app-input-border);
+}
+
+.tool-body-row-label {
+    color: var(--app-secondary-foreground);
+    opacity: 0.5;
+    font-family: var(--app-monospace-font-family);
+    font-size: 0.85em;
+    padding: 4px 8px 4px 4px;
+    white-space: nowrap;
+}
+
+.tool-body-row-content {
+    white-space: pre-wrap;
+    word-break: break-word;
+    padding: 4px;
+    font-size: 13px;
+    max-height: 60px;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, black 50px, transparent 60px);
+    mask-image: linear-gradient(to bottom, black 50px, transparent 60px);
+}
+
+.tool-body-row-content.expanded {
+    max-height: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+/* Legacy fallback for simple tool bodies */
 .tool-body pre {
     margin: 0;
-    padding: 0;
+    padding: 4px;
     white-space: pre-wrap;
     word-break: break-all;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-    font-size: 11px;
+    font-family: var(--app-monospace-font-family);
+    font-size: var(--app-monospace-font-size-small);
     line-height: 1.4;
-    color: var(--text-primary);
+    color: var(--app-primary-foreground);
     max-height: 200px;
     overflow-y: auto;
 }
 
-/* Permission cards */
+/* ── Secondary line (secondaryLine_mLrg7g) ──────────────────── */
+.secondary-line {
+    color: var(--app-secondary-foreground);
+    opacity: 0.7;
+    font-size: 0.85em;
+}
+
+.secondary-line a {
+    color: var(--app-secondary-foreground);
+    text-decoration: none;
+}
+
+.secondary-line a:hover {
+    text-decoration: underline;
+}
+
+/* ── Bash Command Display (bashCommand_F2hEIg) ──────────────── */
+.bash-command {
+    font-family: var(--app-monospace-font-family);
+    font-size: 0.9em;
+    max-height: 40vh;
+    overflow-y: auto;
+    border: 1px solid transparent;
+    padding: 4px;
+    border-radius: var(--corner-radius-small);
+}
+
+.bash-command:hover {
+    border-color: var(--app-input-active-border);
+}
+
+/* ── Permission Cards (permissionRequestContainer_qlaBag) ───── */
 .permission-card {
-    margin: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid var(--perm-border, #d4a017);
-    background: var(--perm-bg, #fef9e7);
+    margin: 0 0 6px 0;
+    border-radius: var(--corner-radius-large);
+    border: 1px solid var(--app-input-border);
+    background: var(--app-menu-background);
     overflow: hidden;
+    position: relative;
+    max-height: 70vh;
+    padding: 8px;
+}
+
+/* Inner background layer */
+.permission-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--app-input-background);
+    border-radius: var(--corner-radius-large);
+    z-index: 0;
+}
+
+.permission-card:focus-within {
+    border-color: color-mix(in srgb, var(--app-input-active-border) 65%, transparent);
 }
 
 .permission-card.permission-allowed {
-    background: var(--perm-allowed-bg, #e8f5e9);
-    border-color: var(--perm-allowed-border, #4caf50);
+    border-color: var(--app-success-foreground);
 }
 
 .permission-card.permission-denied {
-    background: var(--perm-denied-bg, #fde0e0);
-    border-color: var(--perm-denied-border, #e53935);
+    border-color: var(--app-error-foreground);
+}
+
+/* Permission content — above background layer */
+.perm-content {
+    position: relative;
+    z-index: 1;
+    color: var(--app-primary-foreground);
+    font-size: 1.1em;
 }
 
 .perm-header {
+    font-weight: 700;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
-    background: var(--perm-header-bg, rgba(0,0,0,0.04));
 }
 
 .perm-icon {
@@ -495,44 +671,23 @@ html, body {
 .perm-icon svg {
     width: 14px;
     height: 14px;
-    color: var(--perm-icon-color, #d4a017);
 }
-
-.permission-allowed .perm-icon svg { color: #4caf50; }
-.permission-denied .perm-icon svg { color: #e53935; }
 
 .perm-title {
-    font-weight: 600;
-    font-size: 12px;
-    color: var(--text-primary);
-}
-
-.risk-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 1px 6px;
-    border-radius: 8px;
-    margin-left: auto;
-}
-
-.risk-high {
-    background: #e53935;
-    color: #fff;
-}
-
-.risk-normal {
-    background: var(--perm-risk-normal-bg, #e0e0e0);
-    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--app-primary-foreground);
 }
 
 .perm-body {
-    padding: 8px 10px;
+    position: relative;
+    z-index: 1;
 }
 
 .perm-tool-name {
     font-weight: 600;
-    font-size: 12px;
-    color: var(--text-primary);
+    font-size: 13px;
+    color: var(--app-primary-foreground);
     margin-bottom: 4px;
     display: flex;
     align-items: center;
@@ -544,87 +699,395 @@ html, body {
     height: 14px;
 }
 
+.perm-input {
+    font-family: var(--app-monospace-font-family);
+    font-size: 0.9em;
+    overflow-y: auto;
+    max-height: 120px;
+}
+
+.perm-description {
+    color: var(--app-secondary-foreground);
+    font-size: 0.9em;
+    margin-bottom: 6px;
+}
+
 .perm-args {
     margin: 4px 0 0 0;
-    padding: 6px 8px;
-    background: var(--bg-code);
-    border-radius: 4px;
-    font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
-    font-size: 11px;
+    padding: 8px;
+    background: var(--app-tool-background);
+    border-radius: var(--corner-radius-small);
+    border: 0.5px solid var(--app-input-border);
+    font-family: var(--app-monospace-font-family);
+    font-size: var(--app-monospace-font-size-small);
     line-height: 1.4;
-    color: var(--text-primary);
+    color: var(--app-primary-foreground);
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 120px;
     overflow-y: auto;
 }
 
+/* ── Permission Buttons (buttonContainer_qlaBag) ────────────── */
 .perm-actions {
     display: flex;
+    flex-direction: column;
     gap: 8px;
-    padding: 8px 10px;
-    border-top: 1px solid var(--perm-border, #d4a017);
-}
-
-.permission-allowed .perm-actions,
-.permission-denied .perm-actions {
-    border-top-color: transparent;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
 }
 
 .perm-btn {
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    border-radius: var(--corner-radius-small);
     border: none;
-    border-radius: 4px;
-    padding: 6px 16px;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    min-height: 32px;
-    min-width: 80px;
-    transition: filter 0.15s;
+    background: transparent;
+    color: var(--app-primary-foreground);
+    box-shadow: inset 0 0 0 1px var(--app-transparent-inner-border);
+    transition: filter 0.15s, background 0.15s;
 }
 
-.perm-btn:hover {
-    filter: brightness(0.9);
+.perm-btn:hover:not(:disabled) {
+    filter: brightness(1.1);
+    background: var(--app-ghost-button-hover-background);
 }
 
 .perm-btn:disabled {
     opacity: 0.5;
-    cursor: default;
-    filter: none;
+    cursor: not-allowed;
 }
 
-.perm-allow {
-    background: #4caf50;
-    color: #fff;
+.perm-btn.focused {
+    background: var(--app-button-background);
+    color: var(--app-button-foreground);
+    font-weight: 700;
 }
 
-.perm-allow-session {
-    background: #2196f3;
-    color: #fff;
+.shortcut-num {
+    opacity: 0.6;
+    padding-right: 4px;
 }
 
-.perm-deny {
-    background: #e53935;
-    color: #fff;
-}
-
-.perm-status {
-    font-size: 12px;
+/* Risk badge */
+.risk-badge {
+    font-size: 10px;
     font-weight: 600;
-    padding: 6px 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: auto;
+}
+
+.risk-high {
+    background: var(--app-error-foreground);
+    color: #fff;
+}
+
+.risk-normal {
+    background: var(--app-primary-border-color);
+    color: var(--app-secondary-foreground);
+}
+
+/* Permission status after decision */
+.perm-status {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 8px;
     text-align: center;
+    position: relative;
+    z-index: 1;
 }
 
 .perm-status-allowed {
-    color: #4caf50;
+    color: var(--app-success-foreground);
 }
 
 .perm-status-denied {
-    color: #e53935;
+    color: var(--app-error-foreground);
 }
 
-/* ── Rewind button & menu ───────────────────────────────── */
+/* ── Keyboard hints (keyboardHints_qlaBag) ──────────────────── */
+.keyboard-hints {
+    color: var(--app-secondary-foreground);
+    font-size: 0.85em;
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+}
 
+/* ── Spinner / Thinking (spinnerRow_07S1Yg) ─────────────────── */
+.thinking-indicator {
+    display: flex;
+    align-items: center;
+    height: 1.85em;
+    margin-top: 4px;
+    margin-left: 0;
+    padding-left: 30px;
+    position: relative;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Timeline dot for spinner */
+.thinking-indicator::before {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--app-secondary-foreground);
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    animation: blink 1s linear infinite;
+}
+
+/* Timeline line for spinner */
+.thinking-indicator::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    background: var(--app-primary-border-color);
+    left: 12px;
+    top: 0;
+    bottom: 0;
+}
+
+.thinking-indicator.timeline-first::after {
+    top: 50%;
+}
+
+.spinner-icon {
+    display: inline-block;
+    text-align: center;
+    width: 1.5em;
+    font-family: var(--app-monospace-font-family);
+    font-size: 1.5em;
+    color: var(--app-spinner-foreground);
+}
+
+.spinner-text {
+    font-weight: 500;
+    margin-left: 4px;
+    color: var(--app-primary-foreground);
+}
+
+/* Legacy thinking dots (still used during streaming) */
+.thinking-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--app-spinner-foreground);
+    animation: blink 1s linear infinite;
+}
+
+.thinking-dot:nth-child(1) { animation-delay: 0s; }
+.thinking-dot:nth-child(2) { animation-delay: 0.33s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.66s; }
+
+/* ── Streaming cursor ───────────────────────────────────────── */
+.streaming .message-content::after {
+    content: '\25AE';
+    animation: blink 1s step-end infinite;
+    color: var(--app-secondary-foreground);
+    margin-left: 2px;
+}
+
+/* ── Error Banner (errorBanner_07S1Yg) ──────────────────────── */
+.error-banner {
+    background: color-mix(in srgb, var(--app-primary-background) 96%, var(--app-error-foreground) 4%);
+    color: var(--app-error-foreground);
+    border-bottom: 1px solid var(--app-error-foreground);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-size: 13px;
+}
+
+.error-message {
+    word-wrap: break-word;
+    user-select: text;
+    flex: 1;
+    margin-top: 2px;
+    padding: 10px 12px;
+}
+
+.error-dismiss {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-error-foreground);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+.error-dismiss:hover {
+    opacity: 0.7;
+}
+
+/* ── Error messages (inline) ────────────────────────────────── */
+.message-error {
+    position: relative;
+    padding-left: 30px;
+}
+
+.message-error::before {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #c74e39;
+    left: 9px;
+    top: 15px;
+    z-index: 1;
+}
+
+.message-error::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    background: var(--app-primary-border-color);
+    left: 12px;
+    top: 0;
+    bottom: 0;
+}
+
+/* ── System messages ────────────────────────────────────────── */
+.message-system {
+    position: relative;
+    padding-left: 30px;
+    color: var(--app-secondary-foreground);
+}
+
+.message-system::before {
+    content: '';
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--app-secondary-foreground);
+    left: 9px;
+    top: 15px;
+    z-index: 1;
+}
+
+.message-system::after {
+    content: '';
+    position: absolute;
+    width: 1px;
+    background: var(--app-primary-border-color);
+    left: 12px;
+    top: 0;
+    bottom: 0;
+}
+
+/* ── Drop Overlay (dropInfoOverlay_07S1Yg) ──────────────────── */
+.drop-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    pointer-events: none;
+    background: color-mix(in srgb, var(--app-claude-orange), transparent 85%);
+    border: 2px dashed var(--app-claude-orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drop-overlay-label {
+    background: var(--app-primary-background);
+    color: var(--app-primary-foreground);
+    border-radius: var(--corner-radius-medium);
+    padding: 8px 16px;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* ── Tables ─────────────────────────────────────────────────── */
+.message-content table {
+    border-collapse: collapse;
+    margin: 8px 0;
+    width: 100%;
+}
+
+.message-content th, .message-content td {
+    border: 1px solid var(--app-primary-border-color);
+    padding: 4px 8px;
+    text-align: left;
+}
+
+.message-content th {
+    background: var(--app-tool-background);
+    font-weight: 600;
+}
+
+/* ── Horizontal rule ────────────────────────────────────────── */
+.message-content hr {
+    border: none;
+    border-top: 1px solid var(--app-primary-border-color);
+    margin: 12px 0;
+}
+
+/* ── Todo List (todoListContainer_xheXVQ) ───────────────────── */
+.todo-list-container {
+    padding: 8px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.todo-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.todo-item {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.todo-checkbox {
+    width: 1em;
+    height: 1em;
+    border-radius: 2px;
+    border: 1px solid var(--app-input-border);
+    background: var(--app-input-background);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 0.2em;
+}
+
+.todo-checkbox.checked {
+    opacity: 0.7;
+}
+
+.todo-item.completed {
+    opacity: 0.7;
+}
+
+.todo-item.completed .todo-text {
+    text-decoration: line-through;
+    color: var(--app-secondary-foreground);
+    opacity: 0.7;
+}
+
+/* ── Rewind ─────────────────────────────────────────────────── */
 .rewind-container {
     margin-left: auto;
     display: flex;
@@ -634,10 +1097,10 @@ html, body {
 .rewind-btn {
     background: none;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--corner-radius-small);
     padding: 2px 4px;
     cursor: pointer;
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
     opacity: 0;
     transition: opacity 0.15s, background 0.15s, border-color 0.15s;
     display: flex;
@@ -651,16 +1114,16 @@ html, body {
 
 .message-user:hover .rewind-btn:hover {
     opacity: 1;
-    background: var(--bg-secondary);
-    border-color: var(--border-color);
-    color: var(--text-primary);
+    background: var(--app-ghost-button-hover-background);
+    border-color: var(--app-input-border);
+    color: var(--app-primary-foreground);
 }
 
 .rewind-badge {
     position: absolute;
     top: -4px;
     right: -4px;
-    background: var(--tool-write-accent);
+    background: var(--app-claude-orange);
     color: #fff;
     font-size: 9px;
     font-weight: 700;
@@ -675,9 +1138,9 @@ html, body {
 .rewind-menu {
     position: fixed;
     z-index: 9999;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: var(--app-primary-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-large);
     box-shadow: 0 4px 16px rgba(0,0,0,0.15);
     min-width: 220px;
     padding: 4px 0;
@@ -690,13 +1153,13 @@ html, body {
     gap: 8px;
     padding: 8px 12px;
     font-size: 12px;
-    color: var(--text-primary);
+    color: var(--app-primary-foreground);
     cursor: pointer;
     transition: background 0.1s;
 }
 
 .rewind-option:hover {
-    background: var(--bg-secondary);
+    background: var(--app-ghost-button-hover-background);
 }
 
 .rewind-option-icon {
@@ -706,30 +1169,34 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
 }
 
 .rewind-dismiss {
-    color: var(--text-secondary);
+    color: var(--app-secondary-foreground);
     justify-content: center;
 }
 
 .rewind-divider {
     height: 1px;
-    background: var(--border-color);
+    background: var(--app-primary-border-color);
     margin: 4px 0;
 }
 
-/* ── Narrow width adaptations (250-400px panels) ────────────── */
-
-.message {
-    min-width: 0;
+/* ── Dimming effect (dimmed_07S1Yg) ─────────────────────────── */
+.message.dimmed {
+    opacity: 0.4;
+    transition: opacity 0.2s;
 }
 
-.message-content {
+.message.highlighted {
+    opacity: 1;
+    z-index: 10;
+}
+
+/* ── Narrow width adaptations ───────────────────────────────── */
+.message {
     min-width: 0;
-    overflow-wrap: break-word;
-    word-break: break-word;
 }
 
 .code-block pre {
@@ -744,28 +1211,17 @@ html, body {
     flex-wrap: wrap;
 }
 
-.perm-btn {
-    flex: 1 1 auto;
-    min-width: 60px;
-}
-
 .perm-args {
     overflow-x: auto;
 }
 
-.message-header {
-    min-width: 0;
-    flex-wrap: nowrap;
-}
-
-.sender-name {
-    white-space: nowrap;
-}
-
-.timestamp {
-    white-space: nowrap;
-}
-
 .rewind-menu {
     max-width: calc(100vw - 16px);
+}
+
+/* Hide tool body when viewport < 500px */
+@media (max-width: 500px) {
+    .tool-body {
+        display: none !important;
+    }
 }

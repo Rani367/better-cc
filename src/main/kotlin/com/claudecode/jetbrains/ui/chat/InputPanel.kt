@@ -8,18 +8,30 @@ import com.claudecode.jetbrains.ui.commands.FileMentionEntry
 import com.claudecode.jetbrains.ui.commands.FileMentionPicker
 import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.ui.commands.SlashCommandPalette
+import com.claudecode.jetbrains.ui.theme.ClaudeColors
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Color
+import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.FlowLayout
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.ActionEvent
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.AbstractAction
 import javax.swing.BorderFactory
 import javax.swing.DefaultComboBoxModel
@@ -38,23 +50,62 @@ class InputPanel(
 
     private var sendingInProgress = false
     private var onSlashCommand: ((SlashCommand) -> Unit)? = null
+    private var inputFocused = false
 
     private val textArea = JBTextArea(2, 0).apply {
         lineWrap = true
         wrapStyleWord = true
-        border = JBUI.Borders.empty(4, 8, 4, 8)
+        border = JBUI.Borders.empty(10, 14, 10, 14)
+        isOpaque = false
     }
 
     private val palette = SlashCommandPalette(textArea, ::handleCommandSelected)
     private val filePicker = FileMentionPicker(project, textArea, ::handleFileSelected)
 
-    private val sendButton = JButton("Send").apply {
+    // Send button: rounded 26x26 orange button (sendButton_gGYT1w)
+    private val sendButton = object : JButton() {
+        override fun getPreferredSize(): Dimension = Dimension(JBUI.scale(26), JBUI.scale(26))
+        override fun getMinimumSize(): Dimension = preferredSize
+
+        override fun paintComponent(g: Graphics) {
+            val g2 = g as Graphics2D
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            // Background
+            val bgColor = if (isEnabled) ClaudeColors.CLAUDE_CLAY_BUTTON else {
+                val c = ClaudeColors.CLAUDE_CLAY_BUTTON
+                Color(c.red, c.green, c.blue, 100)
+            }
+            g2.color = bgColor
+            g2.fillRoundRect(0, 0, width, height, JBUI.scale(5), JBUI.scale(5))
+            // Arrow icon (▲ rotated 90° = ▶ pointing right, like a send arrow)
+            g2.color = Color(0xfa, 0xf9, 0xf5) // claude-ivory
+            val cx = width / 2
+            val cy = height / 2
+            val s = JBUI.scale(4)
+            val xPoints = intArrayOf(cx - s, cx + s, cx - s)
+            val yPoints = intArrayOf(cy - s, cy, cy + s)
+            g2.fillPolygon(xPoints, yPoints, 3)
+        }
+    }.apply {
+        isBorderPainted = false
+        isContentAreaFilled = false
+        isFocusPainted = false
+        isOpaque = false
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = "Send message"
         addActionListener { doSend() }
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent?) {
+                if (isEnabled) repaint()
+            }
+        })
     }
 
     // Selection context indicator
     private val selectionLabel = JBLabel("").apply {
         border = JBUI.Borders.emptyLeft(4)
+        font = font.deriveFont(font.size2D * 0.85f)
+        foreground = ClaudeColors.SECONDARY_FOREGROUND
     }
 
     private val selectionToggle = JToggleButton().apply {
@@ -72,6 +123,7 @@ class InputPanel(
     private val selectionPanel = JPanel(
         FlowLayout(FlowLayout.LEFT, JBUI.scale(2), 0)
     ).apply {
+        isOpaque = false
         add(selectionToggle)
         add(selectionLabel)
         isVisible = false
@@ -122,34 +174,92 @@ class InputPanel(
         val scrollPane = JBScrollPane(textArea).apply {
             verticalScrollBarPolicy = JBScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED
             horizontalScrollBarPolicy = JBScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+            border = BorderFactory.createEmptyBorder()
+            isOpaque = false
+            viewport.isOpaque = false
         }
 
-        // Top row: text area + send button
-        val inputRow = JPanel(BorderLayout()).apply {
-            add(scrollPane, BorderLayout.CENTER)
+        // Track focus for border colour change
+        textArea.addFocusListener(object : FocusAdapter() {
+            override fun focusGained(e: FocusEvent?) {
+                inputFocused = true
+                this@InputPanel.repaint()
+            }
+            override fun focusLost(e: FocusEvent?) {
+                inputFocused = false
+                this@InputPanel.repaint()
+            }
+        })
+
+        // Footer bar: permission mode + spacer + send button (inputFooter_gGYT1w)
+        val footerBar = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0,
+                    ClaudeColors.INPUT_BORDER),
+                JBUI.Borders.empty(5)
+            )
+
+            val leftFooter = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+                isOpaque = false
+                add(permissionModeCombo)
+                add(selectionPanel)
+            }
+            add(leftFooter, BorderLayout.CENTER)
             add(sendButton, BorderLayout.EAST)
         }
 
-        // Bottom row: permission mode selector + selection context
-        val modeRow = JPanel(BorderLayout()).apply {
-            val leftPanel = JPanel(
-                FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)
-            ).apply {
-                add(JBLabel("Permission:"))
-                add(permissionModeCombo)
+        // Main input container with rounded border (inputContainer_cKsPxg)
+        val inputContainer = object : JPanel(BorderLayout()) {
+            override fun paintComponent(g: Graphics) {
+                val g2 = g as Graphics2D
+                g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+                )
+                val radius = JBUI.scale(8)
+
+                // Inner background layer (inputContainerBackground_cKsPxg)
+                g2.color = ClaudeColors.INPUT_BACKGROUND
+                g2.fillRoundRect(0, 0, width, height, radius, radius)
+
+                // Border — Claude orange on focus
+                val borderColor = if (inputFocused) {
+                    ClaudeColors.CLAUDE_ORANGE
+                } else {
+                    ClaudeColors.INPUT_BORDER
+                }
+                g2.color = borderColor
+                g2.drawRoundRect(0, 0, width - 1, height - 1, radius, radius)
+
+                // Box shadow hint on focus
+                if (inputFocused) {
+                    val shadowColor = Color(
+                        ClaudeColors.CLAUDE_ORANGE.red,
+                        ClaudeColors.CLAUDE_ORANGE.green,
+                        ClaudeColors.CLAUDE_ORANGE.blue,
+                        30
+                    )
+                    g2.color = shadowColor
+                    g2.drawRoundRect(-1, -1, width + 1, height + 1, radius + 2, radius + 2)
+                }
             }
-            add(leftPanel, BorderLayout.WEST)
-            add(selectionPanel, BorderLayout.EAST)
+        }.apply {
+            isOpaque = false
+            add(scrollPane, BorderLayout.CENTER)
+            add(footerBar, BorderLayout.SOUTH)
         }
 
-        // Combine
+        // Outer wrapper with max-width 680px centering (inputWrapper_cKsPxg)
         val wrapper = JPanel(BorderLayout()).apply {
-            add(inputRow, BorderLayout.CENTER)
-            add(modeRow, BorderLayout.SOUTH)
+            isOpaque = false
+            add(inputContainer, BorderLayout.CENTER)
+            maximumSize = Dimension(JBUI.scale(680), Short.MAX_VALUE.toInt())
         }
 
         add(wrapper, BorderLayout.CENTER)
-        border = JBUI.Borders.empty(4, 8, 8, 8)
+        isOpaque = false
+        border = JBUI.Borders.empty(0, JBUI.scale(16), JBUI.scale(16), JBUI.scale(16))
 
         // Set up key bindings based on current setting
         setupKeyBindings()
@@ -188,7 +298,6 @@ class InputPanel(
                 } else if (filePicker.isVisible) {
                     filePicker.dismiss()
                 } else {
-                    // Return focus to the editor
                     returnFocusToEditor()
                 }
             }
@@ -218,10 +327,6 @@ class InputPanel(
         // MessageBus connection is auto-disposed via parent Disposable
     }
 
-    /**
-     * Moves keyboard focus from the chat input back to the active
-     * editor, if one is open.
-     */
     private fun returnFocusToEditor() {
         val editorManager = com.intellij.openapi.fileEditor.FileEditorManager
             .getInstance(project)
@@ -232,6 +337,7 @@ class InputPanel(
     fun setInputEnabled(enabled: Boolean) {
         sendingInProgress = !enabled
         sendButton.isEnabled = enabled
+        sendButton.repaint()
     }
 
     fun focus() {
@@ -253,18 +359,12 @@ class InputPanel(
         onSelectionToggle = handler
     }
 
-    /**
-     * Inserts text at the current caret position in the text area.
-     */
     fun insertTextAtCursor(text: String) {
         val caretPos = textArea.caretPosition
         textArea.insert(text, caretPos)
         textArea.caretPosition = caretPos + text.length
     }
 
-    /**
-     * Updates the selection context indicator in the footer.
-     */
     fun updateSelectionContext(context: SelectionContext?) {
         if (context != null) {
             val lineText = if (context.lineCount == 1) "1 line" else "${context.lineCount} lines"
@@ -297,7 +397,6 @@ class InputPanel(
     private fun checkTriggers() {
         val text = textArea.text ?: ""
 
-        // Slash command detection (only at start of text, single line)
         if (text.startsWith("/") && !text.contains("\n")) {
             if (!palette.isVisible) {
                 palette.show()
@@ -308,7 +407,6 @@ class InputPanel(
             palette.dismiss()
         }
 
-        // @ file mention detection
         val atMention = findActiveMention(text)
         if (atMention != null) {
             if (!filePicker.isVisible) {
@@ -320,10 +418,6 @@ class InputPanel(
         }
     }
 
-    /**
-     * Finds the active `@mention` query around the caret position.
-     * Returns the query string (after `@`) or null if no mention is active.
-     */
     private fun findActiveMention(text: String): String? {
         if (text.isEmpty()) return null
 
@@ -333,7 +427,6 @@ class InputPanel(
             text.length
         }
 
-        // Look backward from caret to find the nearest @
         var atIndex = -1
         for (i in (caretPos - 1) downTo 0) {
             val ch = text[i]
@@ -341,27 +434,19 @@ class InputPanel(
                 atIndex = i
                 break
             }
-            // Stop if we hit whitespace before finding @, unless it's part of a path
             if (ch == '\n') break
         }
 
         if (atIndex < 0) return null
-
-        // The @ should be at start of line or preceded by whitespace
         if (atIndex > 0 && !text[atIndex - 1].isWhitespace()) return null
 
-        // Extract the query from @ to caret
         val query = text.substring(atIndex, caretPos)
         if (!query.startsWith("@")) return null
 
-        // Don't trigger for just "@" if there's content after the caret on the same line
-        // that includes a space (completed mention)
         val afterCaret = text.substring(caretPos)
         val nextNewline = afterCaret.indexOf('\n')
         val restOfLine = if (nextNewline >= 0) afterCaret.substring(0, nextNewline) else afterCaret
 
-        // If the mention portion (before next space) is already completed, don't show picker
-        // This handles the case where user has already selected a file
         if (restOfLine.isNotEmpty() && !restOfLine[0].isWhitespace() && restOfLine.contains(' ')) {
             return null
         }
@@ -385,7 +470,6 @@ class InputPanel(
             text.length
         }
 
-        // Find the @ position to replace the query
         var atIndex = -1
         for (i in (caretPos - 1) downTo 0) {
             val ch = text[i]
@@ -411,10 +495,6 @@ class InputPanel(
         textArea.caretPosition = (before + replacement).length
     }
 
-    /**
-     * Configures Enter / Ctrl+Enter key bindings based on the
-     * current useCtrlEnterToSend setting.
-     */
     private fun setupKeyBindings() {
         val useCtrlEnter = ClaudeSettings.getInstance().useCtrlEnterToSend
 
@@ -444,19 +524,15 @@ class InputPanel(
         if (useCtrlEnter) {
             textArea.inputMap.put(enterKey, "insert-newline")
             textArea.actionMap.put("insert-newline", newlineAction)
-
             textArea.inputMap.put(ctrlEnterKey, "send")
             textArea.inputMap.put(metaEnterKey, "send")
             textArea.actionMap.put("send", sendAction)
-
             textArea.inputMap.put(shiftEnterKey, "insert-newline")
         } else {
             textArea.inputMap.put(enterKey, "send")
             textArea.actionMap.put("send", sendAction)
-
             textArea.inputMap.put(shiftEnterKey, "insert-newline")
             textArea.actionMap.put("insert-newline", newlineAction)
-
             textArea.inputMap.put(ctrlEnterKey, "send")
             textArea.inputMap.put(metaEnterKey, "send")
         }
