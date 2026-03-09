@@ -415,3 +415,15 @@ The plugin must:
 - Works across all target IDEs
 - Cold startup adds <500ms to IDE launch time
 - Correct in Darcula, Light, and New UI themes
+
+---
+
+## Phase 20: VS Code Extension Clone Parity
+
+**Goal:** After Phase 19 achieved visual fidelity, Phase 20 achieves complete functional parity with the Claude Code VS Code extension. The plugin should be indistinguishable from the VS Code extension in capability.
+
+**Reference:** VS Code extension source extracted to `reference/vscode-extension/` from marketplace VSIX (v2.1.71).
+
+**Gap analysis:** `CLONE-GAP-ANALYSIS.md`
+
+**Phase spec:** `claude-jetbrains-phases/phase-20-vscode-clone-parity.md` (35 sections, 4 priority tiers, complete message protocol reference)
