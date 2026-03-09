@@ -1,0 +1,30 @@
+# Build outputs
+build/
+out/
+
+# Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ Platform tooling
+.intellijPlatform/
+
+# Kotlin compiler metadata
+.kotlin/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kotlin
+*.class
+
+# Environment
+.env
+local.properties

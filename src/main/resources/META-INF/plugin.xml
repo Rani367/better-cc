@@ -1,0 +1,46 @@
+<idea-plugin>
+    <id>com.claudecode.jetbrains</id>
+    <name>Claude Code</name>
+    <vendor>Claude Code Contributors</vendor>
+
+    <description><![CDATA[
+        Native GUI integration for Claude Code in JetBrains IDEs.
+        Provides a chat panel, inline diffs, permission prompts, checkpointing, and session management.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.claudecode.jetbrains.ClaudeCodePlugin"/>
+        <notificationGroup id="Claude Code Notifications"
+                           displayType="BALLOON"
+                           toolWindowId="Claude Code"/>
+        <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
+        <toolWindow id="Claude Code"
+                    anchor="right"
+                    icon="/icons/claude.svg"
+                    factoryClass="com.claudecode.jetbrains.ui.chat.ChatToolWindowFactory"/>
+    </extensions>
+
+    <actions>
+        <group id="ClaudeCode.ToolsMenu" text="Claude Code" popup="true"
+               icon="/icons/claude.svg">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+            <action id="ClaudeCode.Open"
+                    class="com.claudecode.jetbrains.actions.OpenClaudeAction"
+                    text="Open Claude Code"
+                    description="Open the Claude Code panel"
+                    icon="/icons/claude.svg"/>
+        </group>
+        <action id="ClaudeCode.ToggleFocus"
+                class="com.claudecode.jetbrains.actions.ToggleFocusAction"
+                text="Toggle Claude Code Panel"
+                description="Toggle focus between editor and Claude Code panel">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl ESCAPE"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ESCAPE"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ESCAPE"/>
+        </action>
+    </actions>
+</idea-plugin>
