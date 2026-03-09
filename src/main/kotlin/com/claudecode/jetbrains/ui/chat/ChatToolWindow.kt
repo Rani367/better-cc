@@ -1,11 +1,5 @@
 package com.claudecode.jetbrains.ui.chat
 
-import com.claudecode.jetbrains.context.SelectionContextProvider
-import com.claudecode.jetbrains.services.ClaudeState
-import com.claudecode.jetbrains.services.ClaudeStateService
-import com.claudecode.jetbrains.ui.commands.SlashCommand
-import com.claudecode.jetbrains.ui.mcp.McpManagerDialog
-import com.claudecode.jetbrains.ui.plugins.PluginManagerDialog
 import com.claudecode.jetbrains.cli.AssistantMessageEvent
 import com.claudecode.jetbrains.cli.ClaudeCliManager
 import com.claudecode.jetbrains.cli.ClaudeProcess
@@ -24,8 +18,12 @@ import com.claudecode.jetbrains.cli.SystemEvent
 import com.claudecode.jetbrains.cli.TextDelta
 import com.claudecode.jetbrains.cli.ToolUseBlock
 import com.claudecode.jetbrains.context.SelectionContextProvider
+import com.claudecode.jetbrains.services.ClaudeState
+import com.claudecode.jetbrains.services.ClaudeStateService
 import com.claudecode.jetbrains.settings.ClaudeSettings
 import com.claudecode.jetbrains.ui.commands.SlashCommand
+import com.claudecode.jetbrains.ui.mcp.McpManagerDialog
+import com.claudecode.jetbrains.ui.plugins.PluginManagerDialog
 import com.claudecode.jetbrains.ui.diff.DiffDecision
 import com.claudecode.jetbrains.ui.diff.DiffPreviewPanel
 import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
