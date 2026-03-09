@@ -27,6 +27,7 @@ import com.claudecode.jetbrains.ui.plugins.PluginManagerDialog
 import com.claudecode.jetbrains.ui.diff.DiffDecision
 import com.claudecode.jetbrains.ui.diff.DiffPreviewPanel
 import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
+import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
 import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
@@ -145,6 +146,10 @@ class ChatToolWindow(private val project: Project) : Disposable {
     // Permission system
     private var permissionServer: PermissionMcpServer? = null
 
+    // Status change listener (used by editor tabs for indicators)
+    private var statusChangeListener:
+        ((ClaudeVirtualFile.TabStatus) -> Unit)? = null
+
     init {
         project.putUserData(KEY, this)
 
@@ -198,8 +203,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
     }
 
     /**
-     * Set text in the input panel without sending. The user can review and
-     * press Enter.
+     * Set text in the input panel without sending.
      */
     fun prefillInput(text: String) {
         inputPanel.setText(text)
@@ -211,6 +215,17 @@ class ChatToolWindow(private val project: Project) : Disposable {
      */
     fun sendPrefilledMessage(text: String) {
         sendMessage(text)
+    }
+
+    /**
+     * Registers a callback invoked when the conversation status
+     * changes (e.g., permission pending, task complete). Used by
+     * [ClaudeFileEditor] to drive tab status indicators.
+     */
+    fun setStatusChangeListener(
+        listener: (ClaudeVirtualFile.TabStatus) -> Unit
+    ) {
+        statusChangeListener = listener
     }
 
     // ── Session management ───────────────────────────────────
@@ -408,6 +423,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
             val server = PermissionMcpServer()
             server.onPermissionRequest = { request ->
                 stateService.setState(ClaudeState.WAITING_FOR_PERMISSION)
+                statusChangeListener?.invoke(
+                    ClaudeVirtualFile.TabStatus.PERMISSION_PENDING
+                )
                 ApplicationManager.getApplication().invokeLater {
                     if (!project.isDisposed) {
                         messageList.addPermissionCard(request)
@@ -637,6 +655,11 @@ class ChatToolWindow(private val project: Project) : Disposable {
             costUsd = event.costUsd
         )
         stateService.setState(ClaudeState.READY)
+
+        // Notify tab that a task finished
+        statusChangeListener?.invoke(
+            ClaudeVirtualFile.TabStatus.TASK_COMPLETE
+        )
 
         // Update last-active time
         val sessionId = currentSessionId
