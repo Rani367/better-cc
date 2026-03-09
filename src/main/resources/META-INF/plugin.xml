@@ -18,6 +18,9 @@
         <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.ui.sessions.SessionTabManager"/>
+        <fileEditorProvider
+            implementation="com.claudecode.jetbrains.ui.sessions.ClaudeEditorProvider"/>
         <toolWindow id="Claude Code"
                     anchor="right"
                     icon="/icons/claude.svg"
@@ -33,6 +36,16 @@
                     text="Open Claude Code"
                     description="Open the Claude Code panel"
                     icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.OpenInNewTab"
+                    class="com.claudecode.jetbrains.actions.OpenInNewTabAction"
+                    text="Claude Code: Open in New Tab"
+                    description="Open a new Claude Code conversation in an editor tab"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.OpenInNewWindow"
+                    class="com.claudecode.jetbrains.actions.OpenInNewWindowAction"
+                    text="Claude Code: Open in New Window"
+                    description="Open Claude Code in a separate window"
+                    icon="/icons/claude.svg"/>
         </group>
         <action id="ClaudeCode.ToggleFocus"
                 class="com.claudecode.jetbrains.actions.ToggleFocusAction"
@@ -41,6 +54,17 @@
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl ESCAPE"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ESCAPE"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ESCAPE"/>
+        </action>
+        <action id="ClaudeCode.OpenInNewTabShortcut"
+                class="com.claudecode.jetbrains.actions.OpenInNewTabAction"
+                text="Open Claude Code in New Tab"
+                description="Open a new Claude Code conversation in an editor tab">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="ctrl shift ESCAPE"/>
+            <keyboard-shortcut keymap="Mac OS X"
+                               first-keystroke="meta shift ESCAPE"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+"
+                               first-keystroke="meta shift ESCAPE"/>
         </action>
         <action id="ClaudeCode.InsertFileRef"
                 class="com.claudecode.jetbrains.actions.InsertFileRefAction"

@@ -23,6 +23,7 @@ import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.ui.diff.DiffDecision
 import com.claudecode.jetbrains.ui.diff.DiffPreviewPanel
 import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
+import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
 import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
@@ -126,6 +127,10 @@ class ChatToolWindow(private val project: Project) : Disposable {
     // Permission system
     private var permissionServer: PermissionMcpServer? = null
 
+    // Status change listener (used by editor tabs for indicators)
+    private var statusChangeListener:
+        ((ClaudeVirtualFile.TabStatus) -> Unit)? = null
+
     init {
         project.putUserData(KEY, this)
 
@@ -176,6 +181,17 @@ class ChatToolWindow(private val project: Project) : Disposable {
      */
     fun insertTextAtCursor(text: String) {
         inputPanel.insertTextAtCursor(text)
+    }
+
+    /**
+     * Registers a callback invoked when the conversation status
+     * changes (e.g., permission pending, task complete). Used by
+     * [ClaudeFileEditor] to drive tab status indicators.
+     */
+    fun setStatusChangeListener(
+        listener: (ClaudeVirtualFile.TabStatus) -> Unit
+    ) {
+        statusChangeListener = listener
     }
 
     // ── Session management ───────────────────────────────────
@@ -346,6 +362,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
             // Start permission MCP server
             val server = PermissionMcpServer()
             server.onPermissionRequest = { request ->
+                statusChangeListener?.invoke(
+                    ClaudeVirtualFile.TabStatus.PERMISSION_PENDING
+                )
                 ApplicationManager.getApplication().invokeLater {
                     if (!project.isDisposed) {
                         messageList.addPermissionCard(request)
@@ -556,6 +575,12 @@ class ChatToolWindow(private val project: Project) : Disposable {
         if (event.sessionId != null) {
             currentSessionId = event.sessionId
         }
+
+        // Notify tab that a task finished (shows orange dot if
+        // the tab is in the background)
+        statusChangeListener?.invoke(
+            ClaudeVirtualFile.TabStatus.TASK_COMPLETE
+        )
 
         // Update last-active time
         val sessionId = currentSessionId

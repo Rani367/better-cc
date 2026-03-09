@@ -21,7 +21,7 @@ Implementation phases are in `claude-jetbrains-phases/`. Follow them in order. F
 - `phase-09-slash-commands.md` — **COMPLETE**
 - `phase-10-file-mentions.md` — **COMPLETE**
 - `phase-11-session-management.md` — **COMPLETE**
-- `phase-12-multiple-conversations.md`
+- `phase-12-multiple-conversations.md` — **COMPLETE**
 - `phase-13-checkpoints-rewind.md`
 - `phase-14-context-editor-actions.md`
 - `phase-15-toolbar-statusbar.md`
