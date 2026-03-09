@@ -10,6 +10,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Cursor
@@ -64,7 +65,7 @@ class SessionHistoryPanel(
 
         // ── Top: New Conversation button + Search ────────────────
         val topPanel = JPanel(BorderLayout()).apply {
-            border = BorderFactory.createEmptyBorder(6, 8, 4, 8)
+            border = JBUI.Borders.empty(6, 8, 4, 8)
         }
 
         val newConvButton = JButton("New Conversation").apply {
@@ -79,7 +80,7 @@ class SessionHistoryPanel(
         val searchField = SearchTextField(false)
         searchField.preferredSize = Dimension(380, 30)
         val searchWrapper = JPanel(BorderLayout()).apply {
-            border = BorderFactory.createEmptyBorder(6, 0, 4, 0)
+            border = JBUI.Borders.empty(6, 0, 4, 0)
             add(searchField, BorderLayout.CENTER)
         }
         topPanel.add(searchWrapper, BorderLayout.SOUTH)
@@ -89,7 +90,7 @@ class SessionHistoryPanel(
         // ── Center: Session list ──────────────────────────────
         val listPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = BorderFactory.createEmptyBorder(0, 8, 8, 8)
+            border = JBUI.Borders.empty(0, 8, 8, 8)
         }
 
         val scrollPane = JBScrollPane(listPanel).apply {
@@ -138,7 +139,7 @@ class SessionHistoryPanel(
         if (sessions.isEmpty()) {
             val emptyLabel = JBLabel("No sessions found").apply {
                 foreground = JBColor.GRAY
-                border = BorderFactory.createEmptyBorder(20, 0, 0, 0)
+                border = JBUI.Borders.emptyTop(20)
                 alignmentX = Component.CENTER_ALIGNMENT
             }
             listPanel.add(emptyLabel)
@@ -196,7 +197,7 @@ class SessionHistoryPanel(
         val header = JBLabel(title).apply {
             font = font.deriveFont(Font.BOLD, 11f)
             foreground = JBColor.GRAY
-            border = BorderFactory.createEmptyBorder(10, 4, 4, 0)
+            border = JBUI.Borders.empty(10, 4, 4, 0)
             alignmentX = Component.LEFT_ALIGNMENT
         }
         panel.add(header)
@@ -206,7 +207,7 @@ class SessionHistoryPanel(
         val row = JPanel(BorderLayout()).apply {
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, JBColor.border()),
-                BorderFactory.createEmptyBorder(6, 4, 6, 4)
+                JBUI.Borders.empty(6, 4, 6, 4)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 60)
             alignmentX = Component.LEFT_ALIGNMENT

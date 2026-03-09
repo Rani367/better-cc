@@ -9,12 +9,14 @@ import com.claudecode.jetbrains.ui.commands.FileMentionPicker
 import com.claudecode.jetbrains.ui.commands.SlashCommand
 import com.claudecode.jetbrains.ui.commands.SlashCommandPalette
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.awt.event.ActionEvent
@@ -32,7 +34,7 @@ import javax.swing.event.DocumentListener
 class InputPanel(
     private val project: Project,
     private val onSend: (String) -> Unit
-) : JPanel(BorderLayout()) {
+) : JPanel(BorderLayout()), Disposable {
 
     private var sendingInProgress = false
     private var onSlashCommand: ((SlashCommand) -> Unit)? = null
@@ -40,7 +42,7 @@ class InputPanel(
     private val textArea = JBTextArea(2, 0).apply {
         lineWrap = true
         wrapStyleWord = true
-        border = BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        border = JBUI.Borders.empty(4, 8, 4, 8)
     }
 
     private val palette = SlashCommandPalette(textArea, ::handleCommandSelected)
@@ -52,7 +54,7 @@ class InputPanel(
 
     // Selection context indicator
     private val selectionLabel = JBLabel("").apply {
-        border = BorderFactory.createEmptyBorder(0, 4, 0, 0)
+        border = JBUI.Borders.emptyLeft(4)
     }
 
     private val selectionToggle = JToggleButton().apply {
@@ -67,7 +69,9 @@ class InputPanel(
         }
     }
 
-    private val selectionPanel = JPanel(FlowLayout(FlowLayout.LEFT, 2, 0)).apply {
+    private val selectionPanel = JPanel(
+        FlowLayout(FlowLayout.LEFT, JBUI.scale(2), 0)
+    ).apply {
         add(selectionToggle)
         add(selectionLabel)
         isVisible = false
@@ -128,7 +132,9 @@ class InputPanel(
 
         // Bottom row: permission mode selector + selection context
         val modeRow = JPanel(BorderLayout()).apply {
-            val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
+            val leftPanel = JPanel(
+                FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)
+            ).apply {
                 add(JBLabel("Permission:"))
                 add(permissionModeCombo)
             }
@@ -143,7 +149,7 @@ class InputPanel(
         }
 
         add(wrapper, BorderLayout.CENTER)
-        border = BorderFactory.createEmptyBorder(4, 8, 8, 8)
+        border = JBUI.Borders.empty(4, 8, 8, 8)
 
         // Set up key bindings based on current setting
         setupKeyBindings()
@@ -181,6 +187,9 @@ class InputPanel(
                     palette.dismiss()
                 } else if (filePicker.isVisible) {
                     filePicker.dismiss()
+                } else {
+                    // Return focus to the editor
+                    returnFocusToEditor()
                 }
             }
         })
@@ -194,7 +203,7 @@ class InputPanel(
 
         // Listen for settings changes to rebind keys
         ApplicationManager.getApplication().messageBus
-            .connect()
+            .connect(this)
             .subscribe(
                 ClaudeSettings.SETTINGS_CHANGED,
                 object : ClaudeSettingsChangeListener {
@@ -203,6 +212,21 @@ class InputPanel(
                     }
                 }
             )
+    }
+
+    override fun dispose() {
+        // MessageBus connection is auto-disposed via parent Disposable
+    }
+
+    /**
+     * Moves keyboard focus from the chat input back to the active
+     * editor, if one is open.
+     */
+    private fun returnFocusToEditor() {
+        val editorManager = com.intellij.openapi.fileEditor.FileEditorManager
+            .getInstance(project)
+        val editor = editorManager.selectedTextEditor ?: return
+        editor.contentComponent.requestFocusInWindow()
     }
 
     fun setInputEnabled(enabled: Boolean) {

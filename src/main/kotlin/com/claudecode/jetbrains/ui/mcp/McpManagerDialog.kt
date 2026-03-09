@@ -11,6 +11,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -79,7 +80,7 @@ class McpManagerDialog(
     override fun createCenterPanel(): JComponent {
         val mainPanel = JPanel(BorderLayout(0, 12))
         mainPanel.preferredSize = Dimension(600, 500)
-        mainPanel.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        mainPanel.border = JBUI.Borders.empty(8)
 
         // Header
         val headerLabel = JBLabel("Configured MCP Servers").apply {
@@ -106,7 +107,7 @@ class McpManagerDialog(
         val addPanel = createAddServerPanel()
 
         // Status bar
-        statusLabel.border = BorderFactory.createEmptyBorder(4, 0, 0, 0)
+        statusLabel.border = JBUI.Borders.emptyTop(4)
 
         // Assemble
         val topSection = JPanel(BorderLayout(0, 8)).apply {
@@ -211,7 +212,7 @@ class McpManagerDialog(
         if (servers.isEmpty()) {
             val emptyLabel = JBLabel("No MCP servers configured.").apply {
                 alignmentX = Component.CENTER_ALIGNMENT
-                border = BorderFactory.createEmptyBorder(20, 0, 20, 0)
+                border = JBUI.Borders.empty(20, 0, 20, 0)
             }
             serverListPanel.add(emptyLabel)
         } else {
@@ -226,10 +227,10 @@ class McpManagerDialog(
     }
 
     private fun createServerCard(server: McpServerInfo): JPanel {
-        val card = JPanel(BorderLayout(8, 0)).apply {
+        val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(JBColor.border(), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                JBUI.Borders.empty(8, 12, 8, 12)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 60)
         }
@@ -293,7 +294,7 @@ class McpManagerDialog(
         }
     }
 
-    private fun getStatusColor(status: McpServerStatus): java.awt.Color {
+    private fun getStatusColor(status: McpServerStatus): JBColor {
         return when (status) {
             McpServerStatus.CONNECTED -> JBColor(
                 java.awt.Color(0, 150, 0),

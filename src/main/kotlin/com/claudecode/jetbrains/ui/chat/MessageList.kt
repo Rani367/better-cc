@@ -10,6 +10,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.ui.JBColor
 import com.intellij.ui.jcef.JBCefApp
 import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.util.ui.JBUI
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.handler.CefLoadHandlerAdapter
@@ -95,8 +96,8 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                 isEditable = false
                 lineWrap = true
                 wrapStyleWord = true
-                font = Font(Font.MONOSPACED, Font.PLAIN, 13)
-                border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                font = JBUI.Fonts.create(Font.MONOSPACED, 13)
+                border = JBUI.Borders.empty(8)
             }
             fallbackScrollPane = JScrollPane(fallbackTextArea).apply {
                 border = BorderFactory.createEmptyBorder()

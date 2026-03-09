@@ -28,6 +28,7 @@ import com.claudecode.jetbrains.ui.plugins.PluginManagerDialog
 import com.claudecode.jetbrains.ui.diff.DiffDecision
 import com.claudecode.jetbrains.ui.diff.DiffPreviewPanel
 import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
+import com.claudecode.jetbrains.ui.onboarding.OnboardingPanel
 import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
 import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
 import com.intellij.icons.AllIcons
@@ -36,9 +37,11 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,7 +68,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     private val stateService = ClaudeStateService.getInstance(project)
     private val messageList = MessageList(project, this)
-    private val inputPanel = InputPanel(project, ::sendMessage)
+    private val inputPanel = InputPanel(project, ::sendMessage).also {
+        Disposer.register(this, it)
+    }
     private val toolbarPanel = ToolbarPanel(project, this)
     private val contextIndicator = ContextIndicator(project, this)
     private val selectionContextProvider =
@@ -85,7 +90,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
             JBColor.GRAY
         )
         isVisible = false
-        border = BorderFactory.createEmptyBorder(0, 6, 0, 0)
+        border = JBUI.Borders.emptyLeft(6)
     }
 
     private val newConversationButton = JButton(AllIcons.General.Add).apply {
@@ -98,7 +103,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private val headerPanel = JPanel(BorderLayout()).apply {
         border = BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, JBColor.border()),
-            BorderFactory.createEmptyBorder(6, 10, 6, 6)
+            JBUI.Borders.empty(6, 10, 6, 6)
         )
         val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
@@ -109,11 +114,22 @@ class ChatToolWindow(private val project: Project) : Disposable {
         add(newConversationButton, BorderLayout.EAST)
     }
 
+    // Onboarding panel (shown to first-time users)
+    private var onboardingPanel: OnboardingPanel? = null
+
     private val rootPanel = JPanel(BorderLayout()).apply {
         val topPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             add(headerPanel)
             add(toolbarPanel)
+            // Show onboarding if not dismissed
+            if (!ClaudeSettings.getInstance().hideOnboarding) {
+                val panel = OnboardingPanel(project) {
+                    removeOnboarding()
+                }
+                onboardingPanel = panel
+                add(panel)
+            }
         }
         add(topPanel, BorderLayout.NORTH)
         add(messageList, BorderLayout.CENTER)
@@ -202,6 +218,14 @@ class ChatToolWindow(private val project: Project) : Disposable {
     }
 
     fun getContent(): JPanel = rootPanel
+
+    private fun removeOnboarding() {
+        val panel = onboardingPanel ?: return
+        onboardingPanel = null
+        panel.parent?.remove(panel)
+        rootPanel.revalidate()
+        rootPanel.repaint()
+    }
 
     fun focusInput() {
         inputPanel.focus()
@@ -757,6 +781,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
         val msgId = streamingMessageId
         streamingMessageId = null
+        val lastText = accumulatedText.toString()
 
         if (msgId != null) {
             val lastUpdate = pendingUpdate.getAndSet(null)
@@ -771,6 +796,18 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 messageList.showThinking(false)
                 inputPanel.setInputEnabled(true)
                 inputPanel.focus()
+
+                // Show crash notice if stream ended mid-message
+                // with very little content
+                if (lastText.isBlank()) {
+                    messageList.addMessage(
+                        ChatMessage(
+                            MessageSender.ERROR,
+                            "Claude process ended unexpectedly. " +
+                                "Try sending your message again."
+                        )
+                    )
+                }
             }
         } else {
             ApplicationManager.getApplication().invokeLater {
@@ -811,11 +848,28 @@ class ChatToolWindow(private val project: Project) : Disposable {
         streamingMessageId = null
         pendingUpdate.set(null)
         stateService.setState(ClaudeState.READY)
+
+        // Enrich error messages with actionable hints
+        val enrichedText = when {
+            text.contains("not found", ignoreCase = true) ->
+                "$text\n\nInstall Claude Code CLI: " +
+                    "npm install -g @anthropic-ai/claude-code"
+            text.contains("auth", ignoreCase = true) ||
+                text.contains("API key", ignoreCase = true) ->
+                "$text\n\nRun 'claude login' in a terminal " +
+                    "to re-authenticate."
+            text.contains("timed out", ignoreCase = true) ||
+                text.contains("timeout", ignoreCase = true) ->
+                "$text\n\nThe request timed out. " +
+                    "Check your network connection and try again."
+            else -> text
+        }
+
         ApplicationManager.getApplication().invokeLater {
             if (!project.isDisposed) {
                 messageList.showThinking(false)
                 messageList.addMessage(
-                    ChatMessage(MessageSender.ERROR, text)
+                    ChatMessage(MessageSender.ERROR, enrichedText)
                 )
                 inputPanel.setInputEnabled(true)
                 inputPanel.focus()

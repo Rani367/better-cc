@@ -5,6 +5,7 @@ import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -22,7 +23,7 @@ class MessageBubble(private val message: ChatMessage) : JPanel(BorderLayout()) {
 
     init {
         isOpaque = false
-        border = BorderFactory.createEmptyBorder(4, 8, 4, 8)
+        border = JBUI.Borders.empty(4, 8, 4, 8)
         alignmentX = Component.LEFT_ALIGNMENT
 
         // Top row: sender label + timestamp
@@ -31,13 +32,15 @@ class MessageBubble(private val message: ChatMessage) : JPanel(BorderLayout()) {
             isOpaque = false
 
             val senderLabel = JLabel(senderDisplayName(message.sender)).apply {
-                font = font.deriveFont(java.awt.Font.BOLD)
+                font = font.deriveFont(Font.BOLD)
                 foreground = senderColor(message.sender)
             }
             add(senderLabel)
-            add(Box.createHorizontalStrut(6))
+            add(Box.createHorizontalStrut(JBUI.scale(6)))
 
-            val timestampLabel = JLabel(message.timestamp.format(TIME_FORMAT)).apply {
+            val timestampLabel = JLabel(
+                message.timestamp.format(TIME_FORMAT)
+            ).apply {
                 foreground = JBColor.GRAY
                 font = font.deriveFont(font.size2D - 1f)
             }
@@ -46,13 +49,13 @@ class MessageBubble(private val message: ChatMessage) : JPanel(BorderLayout()) {
         }
         add(headerPanel, BorderLayout.NORTH)
 
-        // Message text — trim leading/trailing whitespace
+        // Message text -- trim leading/trailing whitespace
         val textArea = JTextArea(message.text.trim()).apply {
             lineWrap = true
             wrapStyleWord = true
             isEditable = false
             isOpaque = false
-            border = BorderFactory.createEmptyBorder(4, 0, 0, 0)
+            border = JBUI.Borders.empty(4, 0, 0, 0)
         }
         add(textArea, BorderLayout.CENTER)
     }

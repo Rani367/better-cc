@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.GridBagConstraints
@@ -255,7 +256,7 @@ class ClaudeSettingsComponent {
         wrapper.add(formPanel, BorderLayout.NORTH)
         // Let the env table expand vertically
         wrapper.add(JPanel(), BorderLayout.CENTER)
-        wrapper.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        wrapper.border = JBUI.Borders.empty(8)
         return wrapper
     }
 

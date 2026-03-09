@@ -13,6 +13,7 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.FlowLayout
@@ -118,10 +119,12 @@ class ToolbarPanel(
     init {
         border = BorderFactory.createCompoundBorder(
             BorderFactory.createMatteBorder(0, 0, 1, 0, JBColor.border()),
-            BorderFactory.createEmptyBorder(4, 8, 4, 8)
+            JBUI.Borders.empty(4, 8, 4, 8)
         )
 
-        val leftPanel = JPanel(FlowLayout(FlowLayout.LEFT, 6, 0)).apply {
+        val leftPanel = JPanel(
+            FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)
+        ).apply {
             isOpaque = false
             add(JBLabel("Model:"))
             add(modelCombo)
@@ -129,7 +132,9 @@ class ToolbarPanel(
             add(thinkingCombo)
         }
 
-        val rightPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply {
+        val rightPanel = JPanel(
+            FlowLayout(FlowLayout.RIGHT, JBUI.scale(8), 0)
+        ).apply {
             isOpaque = false
             add(usageLabel)
             add(sessionLabel)

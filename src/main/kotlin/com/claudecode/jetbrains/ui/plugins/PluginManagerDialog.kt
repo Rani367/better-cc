@@ -12,6 +12,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTabbedPane
 import com.intellij.ui.components.JBTextField
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -100,7 +101,7 @@ class PluginManagerDialog(
                     java.awt.Color(120, 100, 40)
                 )
             ),
-            BorderFactory.createEmptyBorder(6, 12, 6, 12)
+            JBUI.Borders.empty(6, 12, 6, 12)
         )
         add(
             JBLabel("Restart required for changes to take effect.").apply {
@@ -125,7 +126,7 @@ class PluginManagerDialog(
     override fun createCenterPanel(): JComponent {
         val mainPanel = JPanel(BorderLayout(0, 8))
         mainPanel.preferredSize = Dimension(700, 550)
-        mainPanel.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        mainPanel.border = JBUI.Borders.empty(8)
 
         // Restart banner at top
         mainPanel.add(restartBanner, BorderLayout.NORTH)
@@ -144,7 +145,7 @@ class PluginManagerDialog(
 
     private fun createPluginsTab(): JComponent {
         val panel = JPanel(BorderLayout(0, 8))
-        panel.border = BorderFactory.createEmptyBorder(8, 0, 0, 0)
+        panel.border = JBUI.Borders.emptyTop(8)
 
         // Search bar
         val searchRow = JPanel(BorderLayout(8, 0))
@@ -206,7 +207,7 @@ class PluginManagerDialog(
 
     private fun createMarketplacesTab(): JComponent {
         val panel = JPanel(BorderLayout(0, 8))
-        panel.border = BorderFactory.createEmptyBorder(8, 0, 0, 0)
+        panel.border = JBUI.Borders.emptyTop(8)
 
         // Header
         val headerRow = JPanel(BorderLayout())
@@ -286,7 +287,7 @@ class PluginManagerDialog(
             installedListPanel.add(
                 JBLabel("No installed plugins found.").apply {
                     alignmentX = Component.CENTER_ALIGNMENT
-                    border = BorderFactory.createEmptyBorder(12, 0, 12, 0)
+                    border = JBUI.Borders.empty(12, 0, 12, 0)
                 }
             )
         } else {
@@ -308,7 +309,7 @@ class PluginManagerDialog(
             availableListPanel.add(
                 JBLabel("No available plugins found.").apply {
                     alignmentX = Component.CENTER_ALIGNMENT
-                    border = BorderFactory.createEmptyBorder(12, 0, 12, 0)
+                    border = JBUI.Borders.empty(12, 0, 12, 0)
                 }
             )
         } else {
@@ -330,10 +331,10 @@ class PluginManagerDialog(
     }
 
     private fun createInstalledPluginCard(plugin: PluginInfo): JPanel {
-        val card = JPanel(BorderLayout(8, 0)).apply {
+        val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(JBColor.border(), 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                JBUI.Borders.empty(6, 10, 6, 10)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 50)
         }
@@ -370,10 +371,10 @@ class PluginManagerDialog(
     }
 
     private fun createAvailablePluginCard(plugin: PluginInfo): JPanel {
-        val card = JPanel(BorderLayout(8, 0)).apply {
+        val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(JBColor.border(), 1),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+                JBUI.Borders.empty(6, 10, 6, 10)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 50)
         }
@@ -425,7 +426,7 @@ class PluginManagerDialog(
             marketplaceListPanel.add(
                 JBLabel("No marketplace sources configured.").apply {
                     alignmentX = Component.CENTER_ALIGNMENT
-                    border = BorderFactory.createEmptyBorder(20, 0, 20, 0)
+                    border = JBUI.Borders.empty(20, 0, 20, 0)
                 }
             )
         } else {
@@ -442,10 +443,10 @@ class PluginManagerDialog(
     private fun createMarketplaceCard(
         marketplace: MarketplaceSource
     ): JPanel {
-        val card = JPanel(BorderLayout(8, 0)).apply {
+        val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(JBColor.border(), 1),
-                BorderFactory.createEmptyBorder(8, 12, 8, 12)
+                JBUI.Borders.empty(8, 12, 8, 12)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 50)
         }

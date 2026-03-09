@@ -1,14 +1,17 @@
 package com.claudecode.jetbrains.ui.commands
 
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Font
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPanel
@@ -100,7 +103,7 @@ class SlashCommandPalette(
         }
 
         val scrollPane = JBScrollPane(list).apply {
-            preferredSize = Dimension(340, 260)
+            preferredSize = JBUI.size(340, 260)
             border = BorderFactory.createEmptyBorder()
         }
 
@@ -166,16 +169,20 @@ class SlashCommandPalette(
             isSelected: Boolean,
             cellHasFocus: Boolean
         ): Component {
-            val panel = JPanel(BorderLayout(8, 0)).apply {
-                border = BorderFactory.createEmptyBorder(4, 8, 4, 8)
+            val panel = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
+                border = JBUI.Borders.empty(4, 8, 4, 8)
             }
 
             val nameLabel = JLabel(value?.name ?: "").apply {
-                font = font.deriveFont(java.awt.Font.BOLD)
+                font = font.deriveFont(Font.BOLD)
             }
             val descLabel = JLabel(value?.description ?: "").apply {
-                foreground = if (isSelected) list.selectionForeground else java.awt.Color.GRAY
-                font = font.deriveFont(java.awt.Font.PLAIN)
+                foreground = if (isSelected) {
+                    list.selectionForeground
+                } else {
+                    JBColor.GRAY
+                }
+                font = font.deriveFont(Font.PLAIN)
             }
 
             panel.add(nameLabel, BorderLayout.WEST)

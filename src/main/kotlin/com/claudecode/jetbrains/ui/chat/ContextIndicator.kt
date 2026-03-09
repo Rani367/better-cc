@@ -8,6 +8,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Dimension
@@ -36,12 +37,12 @@ class ContextIndicator(
 
     init {
         isOpaque = false
-        border = BorderFactory.createEmptyBorder(2, 8, 2, 8)
+        border = JBUI.Borders.empty(2, 8, 2, 8)
 
         val barWrapper = JPanel(BorderLayout()).apply {
             isOpaque = false
             add(progressBar, BorderLayout.CENTER)
-            border = BorderFactory.createEmptyBorder(0, 0, 0, 8)
+            border = JBUI.Borders.emptyRight(8)
         }
 
         add(barWrapper, BorderLayout.CENTER)
@@ -101,8 +102,8 @@ class ContextIndicator(
         var percent: Int = 0
 
         init {
-            preferredSize = Dimension(100, 6)
-            minimumSize = Dimension(40, 6)
+            preferredSize = Dimension(JBUI.scale(100), JBUI.scale(6))
+            minimumSize = Dimension(JBUI.scale(40), JBUI.scale(6))
             isOpaque = false
         }
 

@@ -9,9 +9,11 @@ import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileVisitor
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Dimension
@@ -63,7 +65,7 @@ class FileMentionPicker(
         }
 
         val scrollPane = JBScrollPane(list).apply {
-            preferredSize = Dimension(400, 280)
+            preferredSize = JBUI.size(400, 280)
             border = BorderFactory.createEmptyBorder()
         }
 
@@ -256,13 +258,13 @@ class FileMentionPicker(
             isSelected: Boolean,
             cellHasFocus: Boolean
         ): Component {
-            val panel = JPanel(BorderLayout(6, 0)).apply {
-                border = BorderFactory.createEmptyBorder(3, 6, 3, 6)
+            val panel = JPanel(BorderLayout(JBUI.scale(6), 0)).apply {
+                border = JBUI.Borders.empty(3, 6, 3, 6)
             }
 
             // Icon
             val iconLabel = JLabel(value?.icon).apply {
-                border = BorderFactory.createEmptyBorder(0, 0, 0, 2)
+                border = JBUI.Borders.emptyRight(2)
             }
 
             // File name (bold) + relative path (grey)
@@ -275,12 +277,14 @@ class FileMentionPicker(
                 foreground = if (isSelected) {
                     list.selectionForeground
                 } else {
-                    java.awt.Color.GRAY
+                    JBColor.GRAY
                 }
                 font = font.deriveFont(Font.PLAIN, font.size2D - 1f)
             }
 
-            val textPanel = JPanel(BorderLayout(4, 0)).apply {
+            val textPanel = JPanel(
+                BorderLayout(JBUI.scale(4), 0)
+            ).apply {
                 isOpaque = false
                 add(nameLabel, BorderLayout.WEST)
                 add(pathLabel, BorderLayout.CENTER)

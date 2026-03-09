@@ -219,8 +219,8 @@ html, body {
 }
 
 .copy-button.copied {
-    color: #2e7d32;
-    border-color: #2e7d32;
+    color: var(--tool-bash-accent);
+    border-color: var(--tool-bash-accent);
 }
 
 .code-block pre {
@@ -412,7 +412,7 @@ html, body {
 }
 
 .tool-check {
-    color: #2e7d32;
+    color: var(--tool-bash-accent);
     font-size: 14px;
     line-height: 1;
 }
@@ -718,4 +718,54 @@ html, body {
     height: 1px;
     background: var(--border-color);
     margin: 4px 0;
+}
+
+/* ── Narrow width adaptations (250-400px panels) ────────────── */
+
+.message {
+    min-width: 0;
+}
+
+.message-content {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.code-block pre {
+    min-width: 0;
+}
+
+.tool-summary {
+    min-width: 0;
+}
+
+.perm-actions {
+    flex-wrap: wrap;
+}
+
+.perm-btn {
+    flex: 1 1 auto;
+    min-width: 60px;
+}
+
+.perm-args {
+    overflow-x: auto;
+}
+
+.message-header {
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+
+.sender-name {
+    white-space: nowrap;
+}
+
+.timestamp {
+    white-space: nowrap;
+}
+
+.rewind-menu {
+    max-width: calc(100vw - 16px);
 }
