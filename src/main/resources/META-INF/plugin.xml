@@ -18,6 +18,9 @@
         <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.context.DiagnosticsProvider"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.context.FileContextProvider"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.context.ProjectContextProvider"/>
         <toolWindow id="Claude Code"
                     anchor="right"
                     icon="/icons/claude.svg"
@@ -50,5 +53,41 @@
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt K"/>
         </action>
+
+        <!-- Editor right-click context menu actions -->
+        <group id="ClaudeCode.EditorPopupMenu" text="Claude Code" popup="true"
+               icon="/icons/claude.svg">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <action id="ClaudeCode.AskClaude"
+                    class="com.claudecode.jetbrains.actions.AskClaudeAction"
+                    text="Ask Claude About This"
+                    description="Ask Claude about the selected code"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.FixError"
+                    class="com.claudecode.jetbrains.actions.FixErrorAction"
+                    text="Fix This Error with Claude"
+                    description="Send error context to Claude for fixing"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.Refactor"
+                    class="com.claudecode.jetbrains.actions.RefactorAction"
+                    text="Refactor with Claude"
+                    description="Ask Claude to refactor the selected code"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.GenerateTests"
+                    class="com.claudecode.jetbrains.actions.GenerateTestsAction"
+                    text="Generate Tests with Claude"
+                    description="Ask Claude to generate unit tests"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.ExplainCode"
+                    class="com.claudecode.jetbrains.actions.ExplainCodeAction"
+                    text="Explain This Code"
+                    description="Ask Claude to explain the selected code"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.DocumentCode"
+                    class="com.claudecode.jetbrains.actions.DocumentCodeAction"
+                    text="Add Documentation with Claude"
+                    description="Ask Claude to add documentation comments"
+                    icon="/icons/claude.svg"/>
+        </group>
     </actions>
 </idea-plugin>

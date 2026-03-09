@@ -220,6 +220,11 @@ class InputPanel(
         textArea.requestFocusInWindow()
     }
 
+    fun setText(text: String) {
+        textArea.text = text
+        textArea.caretPosition = text.length
+    }
+
     fun getTextArea(): JBTextArea = textArea
 
     fun setSlashCommandHandler(handler: (SlashCommand) -> Unit) {
