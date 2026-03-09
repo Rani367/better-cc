@@ -95,6 +95,22 @@ class ChatToolWindow(private val project: Project) : Disposable {
         inputPanel.focus()
     }
 
+    /**
+     * Set text in the input panel without sending. The user can review and
+     * press Enter.
+     */
+    fun prefillInput(text: String) {
+        inputPanel.setText(text)
+        inputPanel.focus()
+    }
+
+    /**
+     * Send a message programmatically (e.g., from editor context actions).
+     */
+    fun sendPrefilledMessage(text: String) {
+        sendMessage(text)
+    }
+
     private fun handleSlashCommand(command: SlashCommand) {
         if (command.name == "/clear") {
             messageList.clearMessages()

@@ -171,6 +171,11 @@ class InputPanel(private val onSend: (String) -> Unit) : JPanel(BorderLayout()) 
         textArea.requestFocusInWindow()
     }
 
+    fun setText(text: String) {
+        textArea.text = text
+        textArea.caretPosition = text.length
+    }
+
     fun getTextArea(): JBTextArea = textArea
 
     fun setSlashCommandHandler(handler: (SlashCommand) -> Unit) {
