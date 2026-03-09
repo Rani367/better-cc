@@ -45,6 +45,7 @@ class PermissionMcpServer {
     val sessionApprovals = ConcurrentHashMap.newKeySet<String>()
 
     var onPermissionRequest: ((PermissionRequest) -> Unit)? = null
+    var onFileEditAutoApproved: ((PermissionRequest) -> Unit)? = null
 
     fun start() {
         val httpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
@@ -209,7 +210,13 @@ class PermissionMcpServer {
         // Check session approvals — auto-allow if already approved
         if (sessionApprovals.contains(requestedTool)) {
             logger.info("Auto-approving $requestedTool (session approval)")
-            val autoResponse = buildPermissionResult(id, PermissionResponse("allow"))
+            // Notify for checkpoint snapshotting on file edits
+            if (requestedTool == "Write" || requestedTool == "Edit") {
+                onFileEditAutoApproved?.invoke(request)
+            }
+            val autoResponse = buildPermissionResult(
+                id, PermissionResponse("allow")
+            )
             sendResponse(exchange, 200, gson.toJson(autoResponse))
             return
         }

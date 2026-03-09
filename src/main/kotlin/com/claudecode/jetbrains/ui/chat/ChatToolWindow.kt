@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.ui.chat
 
+import com.claudecode.jetbrains.checkpoint.CheckpointManager
 import com.claudecode.jetbrains.cli.AssistantMessageEvent
 import com.claudecode.jetbrains.cli.ClaudeCliManager
 import com.claudecode.jetbrains.cli.ClaudeProcess
@@ -150,6 +151,13 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private var statusChangeListener:
         ((ClaudeVirtualFile.TabStatus) -> Unit)? = null
 
+    // Checkpoint / rewind
+    private val checkpointManager =
+        CheckpointManager.getInstance(project)
+    private var messageIndexCounter = 0
+    private val conversationMessages =
+        mutableListOf<ChatMessage>()
+
     init {
         project.putUserData(KEY, this)
 
@@ -160,6 +168,11 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
         // Wire slash command handler
         inputPanel.setSlashCommandHandler(::handleSlashCommand)
+
+        // Wire rewind handler
+        messageList.setRewindHandler { messageId, action ->
+            handleRewind(messageId, action)
+        }
 
         // Wire selection context
         selectionContextProvider.setOnChangeListener { context ->
@@ -247,6 +260,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
         destroyProcess()
         currentSessionId = null
         isResumedSession = false
+        messageIndexCounter = 0
+        conversationMessages.clear()
 
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
@@ -328,7 +343,11 @@ class ChatToolWindow(private val project: Project) : Disposable {
     }
 
     private fun sendMessage(text: String) {
-        val userMessage = ChatMessage(MessageSender.USER, text)
+        val msgIndex = messageIndexCounter++
+        val userMessage = ChatMessage(
+            MessageSender.USER, text, messageIndex = msgIndex
+        )
+        conversationMessages.add(userMessage)
         messageList.addMessage(userMessage)
         inputPanel.setInputEnabled(false)
         messageList.showThinking(true)
@@ -363,6 +382,14 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         text
                     )
                     updateSessionTitle()
+
+                    // Begin checkpoint for this user turn
+                    checkpointManager.beginCheckpoint(
+                        sessionId = sessionId,
+                        messageIndex = msgIndex,
+                        userMessageId = userMessage.id,
+                        userPromptText = text
+                    )
                 }
 
                 // Prepare streaming message
@@ -431,6 +458,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         messageList.addPermissionCard(request)
                     }
                 }
+            }
+            server.onFileEditAutoApproved = { request ->
+                snapshotFileForRequest(request)
             }
             server.start()
             permissionServer = server
@@ -672,6 +702,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
             }
         }
 
+        // Finalize checkpoint
+        checkpointManager.finalizeCheckpoint()
+
         val msgId = streamingMessageId
         streamingMessageId = null
         accumulatedText.clear()
@@ -701,11 +734,17 @@ class ChatToolWindow(private val project: Project) : Disposable {
             if (msgId != null && finalText.isNotBlank()) {
                 messageList.updateStreamingMessage(msgId, finalText)
                 messageList.finalizeMessage(msgId)
+                trackAssistantMessage(msgId, finalText)
             } else if (finalText.isNotBlank()) {
-                messageList.addMessage(
-                    ChatMessage(MessageSender.ASSISTANT, finalText)
+                val assistMsg = ChatMessage(
+                    MessageSender.ASSISTANT, finalText
                 )
+                messageList.addMessage(assistMsg)
+                trackAssistantMessage(assistMsg.id, finalText)
             }
+
+            // Update rewind badges for all user messages
+            updateRewindBadges()
 
             inputPanel.setInputEnabled(true)
             inputPanel.focus()
@@ -799,7 +838,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 ) {
                     showDiffAndResolve(requestId, request, addSession)
                 } else {
-                    if (addSession) server.addSessionApproval(requestId)
+                    if (addSession) {
+                        server.addSessionApproval(requestId)
+                    }
                     server.resolvePermission(
                         requestId, PermissionResponse("allow")
                     )
@@ -824,8 +865,12 @@ class ChatToolWindow(private val project: Project) : Disposable {
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
 
-            val diffData = DiffPreviewPanel.buildDiffData(project, request)
+            val diffData = DiffPreviewPanel.buildDiffData(
+                project, request
+            )
             if (diffData == null) {
+                // Snapshot even without diff data
+                snapshotFileForRequest(request)
                 if (addSessionApproval) {
                     server.addSessionApproval(requestId)
                 }
@@ -840,6 +885,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
             when (dialog.decision) {
                 DiffDecision.ACCEPT -> {
+                    // Snapshot before allowing the edit
+                    snapshotFileForRequest(request)
                     if (addSessionApproval) {
                         server.addSessionApproval(requestId)
                     }
@@ -860,8 +907,188 @@ class ChatToolWindow(private val project: Project) : Disposable {
         }
     }
 
+    /**
+     * Snapshots the file referenced in a permission request
+     * before the edit is applied.
+     */
+    private fun snapshotFileForRequest(request: PermissionRequest) {
+        val filePath = request.input["file_path"]?.toString()
+            ?: return
+        checkpointManager.snapshotBeforeEdit(filePath)
+    }
+
     private fun isFileModificationTool(toolName: String): Boolean {
         return toolName == "Write" || toolName == "Edit"
+    }
+
+    // ── Rewind / checkpoint ────────────────────────────────────
+
+    private fun trackAssistantMessage(id: String, text: String) {
+        val msgIndex = messageIndexCounter++
+        conversationMessages.add(
+            ChatMessage(
+                MessageSender.ASSISTANT, text,
+                id = id, messageIndex = msgIndex
+            )
+        )
+    }
+
+    private fun updateRewindBadges() {
+        val sessionId = currentSessionId ?: return
+        for (msg in conversationMessages) {
+            if (msg.sender != MessageSender.USER) continue
+            val fileCount = checkpointManager.filesChangedSince(
+                sessionId, msg.messageIndex
+            )
+            messageList.setRewindBadge(msg.id, fileCount)
+        }
+    }
+
+    @Suppress("LongMethod")
+    private fun handleRewind(messageId: String, action: String) {
+        val sessionId = currentSessionId ?: return
+        val targetMsg = conversationMessages.find {
+            it.id == messageId
+        } ?: return
+
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed) return@invokeLater
+
+            when (action) {
+                "codeAndConversation" -> {
+                    // Restore files from this point onwards
+                    val result = checkpointManager.restoreFiles(
+                        sessionId, targetMsg.messageIndex
+                    )
+                    // Remove later checkpoints
+                    checkpointManager.removeCheckpointsFrom(
+                        sessionId, targetMsg.messageIndex
+                    )
+                    // Truncate conversation in UI
+                    messageList.removeMessagesFrom(messageId)
+                    // Truncate in-memory conversation
+                    truncateConversation(targetMsg.messageIndex)
+                    // Re-populate input with original prompt
+                    inputPanel.setText(targetMsg.text)
+                    inputPanel.setInputEnabled(true)
+                    inputPanel.focus()
+                    // Show system notification
+                    messageList.addMessage(
+                        ChatMessage(
+                            MessageSender.SYSTEM,
+                            "Rewound code and conversation. " +
+                                "${result.restoredFileCount} file(s) " +
+                                "restored." +
+                                formatRewindWarnings(result)
+                        )
+                    )
+                    // Restart process for next turn
+                    destroyProcess()
+                }
+                "conversationOnly" -> {
+                    // Truncate conversation, keep files as-is
+                    messageList.removeMessagesFrom(messageId)
+                    truncateConversation(targetMsg.messageIndex)
+                    inputPanel.setText(targetMsg.text)
+                    inputPanel.setInputEnabled(true)
+                    inputPanel.focus()
+                    messageList.addMessage(
+                        ChatMessage(
+                            MessageSender.SYSTEM,
+                            "Conversation rewound. " +
+                                "Files left unchanged."
+                        )
+                    )
+                    destroyProcess()
+                }
+                "codeOnly" -> {
+                    // Restore files, keep full conversation
+                    val result = checkpointManager.restoreFiles(
+                        sessionId, targetMsg.messageIndex
+                    )
+                    messageList.addMessage(
+                        ChatMessage(
+                            MessageSender.SYSTEM,
+                            "Code restored to checkpoint. " +
+                                "${result.restoredFileCount} file(s) " +
+                                "reverted. Conversation preserved." +
+                                formatRewindWarnings(result)
+                        )
+                    )
+                    updateRewindBadges()
+                }
+                "summarize" -> {
+                    // Build summary of messages after this point
+                    val summary = buildSummary(
+                        targetMsg.messageIndex
+                    )
+                    messageList.replaceMessagesWithSummary(
+                        messageId, summary
+                    )
+                    truncateConversation(targetMsg.messageIndex)
+                    // Add the summary as a system message
+                    // in the internal list
+                    conversationMessages.add(
+                        ChatMessage(
+                            MessageSender.SYSTEM,
+                            summary,
+                            messageIndex = messageIndexCounter++
+                        )
+                    )
+                    inputPanel.setInputEnabled(true)
+                    inputPanel.focus()
+                }
+            }
+        }
+    }
+
+    private fun truncateConversation(fromIndex: Int) {
+        conversationMessages.removeAll { it.messageIndex >= fromIndex }
+        messageIndexCounter = (conversationMessages.maxOfOrNull {
+            it.messageIndex
+        } ?: -1) + 1
+    }
+
+    private fun buildSummary(fromMessageIndex: Int): String {
+        val laterMessages = conversationMessages.filter {
+            it.messageIndex > fromMessageIndex
+        }.sortedBy { it.messageIndex }
+
+        if (laterMessages.isEmpty()) {
+            return "*No subsequent messages to summarize.*"
+        }
+
+        val sb = StringBuilder()
+        sb.append("**Summary of ${laterMessages.size} message(s):**\n\n")
+        for (msg in laterMessages) {
+            val sender = when (msg.sender) {
+                MessageSender.USER -> "You"
+                MessageSender.ASSISTANT -> "Claude"
+                MessageSender.ERROR -> "Error"
+                MessageSender.SYSTEM -> "System"
+            }
+            val preview = msg.text.take(120).replace('\n', ' ')
+            sb.append("- **$sender**: $preview")
+            if (msg.text.length > 120) sb.append("...")
+            sb.append("\n")
+        }
+        return sb.toString()
+    }
+
+    private fun formatRewindWarnings(
+        result: com.claudecode.jetbrains.checkpoint.RewindResult
+    ): String {
+        val parts = mutableListOf<String>()
+        if (result.skippedFiles.isNotEmpty()) {
+            parts.add(
+                " ${result.skippedFiles.size} file(s) could not " +
+                    "be restored."
+            )
+        }
+        if (result.warnings.isNotEmpty()) {
+            parts.addAll(result.warnings.map { " $it" })
+        }
+        return parts.joinToString("")
     }
 
     private fun destroyProcess() {

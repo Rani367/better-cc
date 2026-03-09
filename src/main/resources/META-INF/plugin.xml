@@ -28,6 +28,7 @@
         <projectService serviceImplementation="com.claudecode.jetbrains.context.ProjectContextProvider"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.services.ClaudeStateService"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.ui.sessions.SessionTabManager"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.checkpoint.CheckpointManager"/>
         <fileEditorProvider
             implementation="com.claudecode.jetbrains.ui.sessions.ClaudeEditorProvider"/>
         <statusBarWidgetFactory

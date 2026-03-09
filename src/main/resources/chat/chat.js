@@ -89,6 +89,15 @@ function addMessage(id, sender, content) {
         html = renderMarkdown(content);
     }
 
+    var rewindHtml = '';
+    if (sender === 'USER') {
+        rewindHtml =
+            '<button class="rewind-btn" title="Rewind to this point" ' +
+                'onclick="showRewindMenu(\'' + escapeHtml(id) + '\', event)">' +
+                rewindIcon() +
+            '</button>';
+    }
+
     var div = document.createElement('div');
     div.id = 'msg-' + id;
     div.className = 'message message-' + cls;
@@ -96,6 +105,7 @@ function addMessage(id, sender, content) {
         '<div class="message-header">' +
             '<span class="sender-name sender-' + cls + '">' + senderDisplayName(sender) + '</span>' +
             '<span class="timestamp">' + formatTimestamp() + '</span>' +
+            (rewindHtml ? '<span class="rewind-container">' + rewindHtml + '</span>' : '') +
         '</div>' +
         '<div class="message-content">' + html + '</div>';
 
@@ -552,4 +562,207 @@ function isColorDark(color) {
     var b = parseInt(hex.substr(4, 2), 16);
     var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance < 0.5;
+}
+
+// ── Rewind / Checkpoint ──────────────────────────────────────────
+
+function rewindIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" ' +
+        'width="14" height="14">' +
+        '<circle cx="8" cy="8" r="6"/>' +
+        '<path d="M8 4.5v4l2.5 1.5"/>' +
+        '<path d="M3.5 3L5.5 5 3.5 7" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+}
+
+var _activeRewindMenu = null;
+
+function showRewindMenu(messageId, event) {
+    event.stopPropagation();
+    dismissRewindMenu();
+
+    var btn = event.currentTarget;
+    var rect = btn.getBoundingClientRect();
+
+    var menu = document.createElement('div');
+    menu.className = 'rewind-menu';
+    menu.innerHTML =
+        '<div class="rewind-option" onclick="triggerRewind(\'' + escapeHtml(messageId) + '\', \'codeAndConversation\')">' +
+            '<span class="rewind-option-icon">' + rewindCodeConvoIcon() + '</span>' +
+            'Restore code and conversation' +
+        '</div>' +
+        '<div class="rewind-option" onclick="triggerRewind(\'' + escapeHtml(messageId) + '\', \'conversationOnly\')">' +
+            '<span class="rewind-option-icon">' + rewindConvoIcon() + '</span>' +
+            'Restore conversation only' +
+        '</div>' +
+        '<div class="rewind-option" onclick="triggerRewind(\'' + escapeHtml(messageId) + '\', \'codeOnly\')">' +
+            '<span class="rewind-option-icon">' + rewindCodeIcon() + '</span>' +
+            'Restore code only' +
+        '</div>' +
+        '<div class="rewind-option" onclick="triggerRewind(\'' + escapeHtml(messageId) + '\', \'summarize\')">' +
+            '<span class="rewind-option-icon">' + summarizeIcon() + '</span>' +
+            'Summarize from here' +
+        '</div>' +
+        '<div class="rewind-divider"></div>' +
+        '<div class="rewind-option rewind-dismiss" onclick="dismissRewindMenu()">' +
+            'Never mind' +
+        '</div>';
+
+    document.body.appendChild(menu);
+    _activeRewindMenu = menu;
+
+    // Position below the button
+    var menuRect = menu.getBoundingClientRect();
+    var top = rect.bottom + 4;
+    var left = rect.left;
+
+    // Clamp to viewport
+    if (left + menuRect.width > window.innerWidth - 8) {
+        left = window.innerWidth - menuRect.width - 8;
+    }
+    if (top + menuRect.height > window.innerHeight - 8) {
+        top = rect.top - menuRect.height - 4;
+    }
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+
+    // Dismiss on click outside
+    setTimeout(function() {
+        document.addEventListener('click', _onDocClickRewind);
+    }, 0);
+}
+
+function _onDocClickRewind(e) {
+    if (_activeRewindMenu && !_activeRewindMenu.contains(e.target)) {
+        dismissRewindMenu();
+    }
+}
+
+function dismissRewindMenu() {
+    if (_activeRewindMenu) {
+        _activeRewindMenu.remove();
+        _activeRewindMenu = null;
+    }
+    document.removeEventListener('click', _onDocClickRewind);
+}
+
+function triggerRewind(messageId, action) {
+    dismissRewindMenu();
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({
+            action: 'rewind',
+            messageId: messageId,
+            rewindAction: action
+        }));
+    }
+}
+
+function rewindCodeConvoIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">' +
+        '<path d="M2 4l3-2v4L2 4z" fill="currentColor" stroke="none"/>' +
+        '<path d="M6 4l3-2v4L6 4z" fill="currentColor" stroke="none"/>' +
+        '<rect x="9" y="2" width="5" height="12" rx="1"/>' +
+    '</svg>';
+}
+
+function rewindConvoIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">' +
+        '<path d="M3 4h10M3 8h7M3 12h5"/>' +
+    '</svg>';
+}
+
+function rewindCodeIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">' +
+        '<path d="M5 3L2 8l3 5M11 3l3 5-3 5"/>' +
+    '</svg>';
+}
+
+function summarizeIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">' +
+        '<rect x="2" y="2" width="12" height="12" rx="2"/>' +
+        '<path d="M5 5h6M5 8h4M5 11h2"/>' +
+    '</svg>';
+}
+
+/**
+ * Remove all message elements from the given message ID onwards.
+ * Used when rewinding conversation.
+ */
+function removeMessagesFrom(messageId) {
+    var container = document.getElementById('messages');
+    var target = document.getElementById('msg-' + messageId);
+    if (!target) return;
+
+    var toRemove = [];
+    var found = false;
+    var children = container.children;
+    for (var i = 0; i < children.length; i++) {
+        if (children[i] === target) {
+            found = true;
+        }
+        if (found) {
+            toRemove.push(children[i]);
+        }
+    }
+    for (var j = 0; j < toRemove.length; j++) {
+        // Also clean up any streaming animations
+        var id = toRemove[j].id;
+        if (id && id.startsWith('msg-')) {
+            var msgId = id.substring(4);
+            if (_streamAnim[msgId]) {
+                if (_streamAnim[msgId].raf) {
+                    cancelAnimationFrame(_streamAnim[msgId].raf);
+                }
+                delete _streamAnim[msgId];
+            }
+        }
+        container.removeChild(toRemove[j]);
+    }
+}
+
+/**
+ * Replace all messages from the given ID with a summary message.
+ */
+function replaceMessagesWithSummary(messageId, summaryText) {
+    removeMessagesFrom(messageId);
+
+    // Add a system message with the summary
+    var container = document.getElementById('messages');
+    var div = document.createElement('div');
+    div.className = 'message message-system';
+    div.innerHTML =
+        '<div class="message-header">' +
+            '<span class="sender-name sender-system">System</span>' +
+            '<span class="timestamp">' + formatTimestamp() + '</span>' +
+        '</div>' +
+        '<div class="message-content">' +
+            renderMarkdown(summaryText) +
+        '</div>';
+    container.appendChild(div);
+    scrollToBottom();
+}
+
+/**
+ * Update file-change badge on a rewind button.
+ */
+function setRewindBadge(messageId, fileCount) {
+    var msg = document.getElementById('msg-' + messageId);
+    if (!msg) return;
+    var btn = msg.querySelector('.rewind-btn');
+    if (!btn) return;
+
+    var existing = btn.querySelector('.rewind-badge');
+    if (fileCount > 0) {
+        if (!existing) {
+            var badge = document.createElement('span');
+            badge.className = 'rewind-badge';
+            badge.textContent = fileCount;
+            btn.appendChild(badge);
+        } else {
+            existing.textContent = fileCount;
+        }
+    } else if (existing) {
+        existing.remove();
+    }
 }
