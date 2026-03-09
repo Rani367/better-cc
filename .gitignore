@@ -29,3 +29,7 @@ Thumbs.db
 .env
 local.properties
 .claude/worktrees/
+
+# Large binary/bundled files from VS Code extension reference
+reference/vscode-extension/resources/native-binary/
+reference/vscode-extension/webview/index.js
