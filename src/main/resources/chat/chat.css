@@ -72,8 +72,8 @@
 html, body {
     height: 100%;
     overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    font-size: 13px;
+    font-family: var(--app-chat-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+    font-size: var(--app-chat-font-size, 13px);
     line-height: 1.5;
     color: var(--app-primary-foreground);
     background: var(--app-primary-background);

@@ -622,10 +622,30 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
             put("--app-progressbar-background", "#74c991")
             // Scrollbar
             put("--scrollbar-thumb", if (isDark) "#555759" else "#c1c1c1")
-            // Monospace font
-            put("--app-monospace-font-family", "\"${monospaceFontFamily()}\", \"JetBrains Mono\", \"Fira Code\", \"Consolas\", monospace")
-            put("--app-monospace-font-size", "${monospaceFontSize()}px")
-            put("--app-monospace-font-size-small", "${(monospaceFontSize() - 2).coerceAtLeast(9)}px")
+            // Monospace/code font — use settings override or IDE default
+            val fontSettings =
+                com.claudecode.jetbrains.settings.ClaudeSettings
+                    .getInstance()
+            val codeFamily = fontSettings.editorFontFamily
+                .ifBlank { monospaceFontFamily() }
+            val codeSize = if (fontSettings.editorFontSize > 0) {
+                fontSettings.editorFontSize
+            } else {
+                monospaceFontSize()
+            }
+            put("--app-monospace-font-family", "\"$codeFamily\", \"JetBrains Mono\", \"Fira Code\", \"Consolas\", monospace")
+            put("--app-monospace-font-size", "${codeSize}px")
+            put("--app-monospace-font-size-small", "${(codeSize - 2).coerceAtLeast(9)}px")
+            // Chat font — use settings override or system default
+            val chatFamily = fontSettings.chatFontFamily
+                .ifBlank { "system-ui, -apple-system, sans-serif" }
+            val chatSize = if (fontSettings.chatFontSize > 0) {
+                fontSettings.chatFontSize
+            } else {
+                13
+            }
+            put("--app-chat-font-family", chatFamily)
+            put("--app-chat-font-size", "${chatSize}px")
         }
     }
 

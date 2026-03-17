@@ -1135,6 +1135,12 @@ class ChatToolWindow(private val project: Project) : Disposable {
         val server = permissionServer ?: return
         when (decision) {
             "allow", "allowSession" -> {
+                // Auto-save before file operations
+                if (ClaudeSettings.getInstance().autoSave) {
+                    com.intellij.openapi.fileEditor
+                        .FileDocumentManager.getInstance()
+                        .saveAllDocuments()
+                }
                 stateService.setState(ClaudeState.THINKING)
                 val addSession = decision == "allowSession"
                 val request = server.getOriginalRequest(requestId)
