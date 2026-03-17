@@ -41,7 +41,6 @@ import javax.swing.AbstractAction
 import javax.swing.BorderFactory
 import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
-import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.JToggleButton
 import javax.swing.KeyStroke
@@ -195,20 +194,6 @@ class InputPanel(
         selectedItem = ClaudeSettings.getInstance().permissionMode
         addActionListener {
             val selected = selectedItem as? PermissionMode ?: return@addActionListener
-            if (selected == PermissionMode.BYPASS) {
-                val settings = ClaudeSettings.getInstance()
-                if (!settings.allowDangerouslySkipPermissions) {
-                    JOptionPane.showMessageDialog(
-                        this@InputPanel,
-                        "Bypass mode is not enabled.\n" +
-                            "Enable 'allowDangerouslySkipPermissions' in settings first.",
-                        "Bypass Not Allowed",
-                        JOptionPane.WARNING_MESSAGE
-                    )
-                    this.selectedItem = settings.permissionMode
-                    return@addActionListener
-                }
-            }
             ClaudeSettings.getInstance().permissionMode = selected
         }
     }

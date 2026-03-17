@@ -777,13 +777,6 @@ class ChatToolWindow(private val project: Project) : Disposable {
             }
             "permissionMode" -> {
                 val mode = PermissionMode.fromCliValue(value)
-                if (mode == PermissionMode.BYPASS) {
-                    if (!ClaudeSettings.getInstance()
-                            .allowDangerouslySkipPermissions
-                    ) {
-                        return
-                    }
-                }
                 ClaudeSettings.getInstance().permissionMode = mode
                 messageList.setPermissionModeLabel(mode.displayName)
                 messageList.setPickerCurrent(

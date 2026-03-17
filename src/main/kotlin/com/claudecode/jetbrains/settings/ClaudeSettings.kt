@@ -60,7 +60,7 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
     data class State(
         var claudeCommand: String = "claude",
         var permissionMode: String = "default",
-        var allowDangerouslySkipPermissions: Boolean = false,
+
         var selectedModel: String = "",
         var preferredLocation: String = "SIDEBAR",
         var autoSave: Boolean = true,
@@ -105,11 +105,6 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
             state.permissionMode = value.cliValue
         }
 
-    var allowDangerouslySkipPermissions: Boolean
-        get() = state.allowDangerouslySkipPermissions
-        set(value) {
-            state.allowDangerouslySkipPermissions = value
-        }
 
     var selectedModel: String
         get() = state.selectedModel
