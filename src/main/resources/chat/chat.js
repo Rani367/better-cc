@@ -900,6 +900,18 @@ function updateThinkingBlock(id, text) {
 /**
  * Finalize a thinking block — change dot from blinking to green.
  */
+function _generateThinkingSummary(text) {
+    if (!text || text.trim().length === 0) return '';
+    // Extract first meaningful sentence as summary
+    var cleaned = text.replace(/^[\s\n]+/, '').replace(/\n/g, ' ');
+    // Find first sentence boundary
+    var match = cleaned.match(/^(.{10,120}?[.!?])\s/);
+    if (match) return match[1];
+    // Fall back to first N chars
+    if (cleaned.length > 100) return cleaned.substring(0, 100) + '\u2026';
+    return cleaned;
+}
+
 function finalizeThinkingBlock(id) {
     var state = _thinkingBlocks[id];
     if (!state) return;
@@ -914,8 +926,17 @@ function finalizeThinkingBlock(id) {
     if (block) {
         var labelEl = block.querySelector('.thinking-label');
         if (labelEl) {
-            var wordCount = state.text.split(/\s+/).length;
-            labelEl.textContent = 'Thought for ' + wordCount + ' words';
+            var wordCount = state.text.split(/\s+/).filter(
+                function(w) { return w.length > 0; }
+            ).length;
+            var summary = _generateThinkingSummary(state.text);
+            if (summary) {
+                labelEl.textContent = 'Thought for ' + wordCount +
+                    ' words \u2014 ' + summary;
+            } else {
+                labelEl.textContent = 'Thought for ' + wordCount +
+                    ' words';
+            }
         }
     }
 
