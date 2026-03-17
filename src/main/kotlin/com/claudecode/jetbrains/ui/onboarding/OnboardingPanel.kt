@@ -21,37 +21,51 @@ import javax.swing.JButton
 import javax.swing.JPanel
 
 /**
- * Onboarding checklist panel displayed to first-time users.
- * Shows a list of suggested actions with "Show me" buttons.
- * Can be dismissed and re-shown from settings.
+ * Onboarding walkthrough panel matching VS Code extension steps.
+ * Tracks completed milestones via [ClaudeSettings.completedMilestones].
+ * Each milestone shows a checkmark when completed.
  */
 class OnboardingPanel(
     private val project: Project,
     private val onDismiss: () -> Unit
 ) : JPanel(BorderLayout()) {
 
-    private val checklistItems = listOf(
-        OnboardingItem(
-            title = "Send your first message",
-            description = "Type a message and press Enter to chat with Claude.",
+    /** Milestone IDs must be stable strings for persistence. */
+    private val milestones = listOf(
+        Milestone(
+            id = "welcome",
+            title = "Your AI coding partner",
+            description = "Claude Code is your AI pair programmer " +
+                "right inside JetBrains.",
+            action = null
+        ),
+        Milestone(
+            id = "open_claude",
+            title = "Open Claude Code",
+            description = "Open the Claude Code tool window " +
+                "to start a conversation.",
+            action = ::openClaudeToolWindow
+        ),
+        Milestone(
+            id = "chat_with_claude",
+            title = "Chat with Claude",
+            description = "Type a message and press Enter " +
+                "to get help with your code.",
             action = ::focusInput
         ),
-        OnboardingItem(
-            title = "Use @-mentions to reference files",
-            description = "Type @ followed by a filename to include it as context.",
-            action = ::showMentionHint
-        ),
-        OnboardingItem(
-            title = "Try slash commands",
-            description = "Type / to see available commands like /compact, /model, /clear.",
-            action = ::showSlashHint
-        ),
-        OnboardingItem(
-            title = "Review a code change",
-            description = "When Claude edits files, you can review diffs before accepting.",
-            action = null
+        Milestone(
+            id = "past_conversations",
+            title = "Past conversations",
+            description = "Access your conversation history " +
+                "from the sessions dropdown.",
+            action = ::showSessionsHint
         )
     )
+
+    private val listPanel = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        border = JBUI.Borders.empty(4, 0)
+    }
 
     private companion object {
         private val HEADER_BG = JBColor(
@@ -62,6 +76,11 @@ class OnboardingPanel(
             Color(0xF5, 0xF5, 0xF5),
             Color(0x35, 0x37, 0x39)
         )
+        private val CHECK_COLOR = JBColor(
+            Color(0x4C, 0xAF, 0x50),
+            Color(0x66, 0xBB, 0x6A)
+        )
+        private val PENDING_COLOR = JBColor.GRAY
     }
 
     init {
@@ -85,27 +104,65 @@ class OnboardingPanel(
                 isBorderPainted = false
                 isContentAreaFilled = false
                 toolTipText = "Dismiss onboarding"
-                cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                cursor = Cursor.getPredefinedCursor(
+                    Cursor.HAND_CURSOR
+                )
                 addActionListener { dismiss() }
             }
             add(closeButton, BorderLayout.EAST)
         }
         add(headerPanel, BorderLayout.NORTH)
 
-        // Checklist
-        val listPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = JBUI.Borders.empty(4, 0)
+        // Progress summary
+        val completed = ClaudeSettings.getInstance().completedMilestones
+        val completedCount = milestones.count {
+            completed.contains(it.id)
         }
-
-        for (item in checklistItems) {
-            listPanel.add(createItemRow(item))
+        val progressText = "$completedCount / ${milestones.size} completed"
+        val progressPanel = JPanel(
+            FlowLayout(FlowLayout.LEFT, 12, 0)
+        ).apply {
+            border = JBUI.Borders.empty(6, 12, 2, 12)
+            isOpaque = false
         }
+        progressPanel.add(JBLabel(progressText).apply {
+            foreground = JBColor.GRAY
+            font = font.deriveFont(font.size2D - 1f)
+        })
+        add(progressPanel, BorderLayout.SOUTH)
 
+        // Milestone list
+        renderMilestones()
         add(listPanel, BorderLayout.CENTER)
+
+        // Auto-mark "welcome" as completed on view
+        markCompleted("welcome")
     }
 
-    private fun createItemRow(item: OnboardingItem): JPanel {
+    private fun renderMilestones() {
+        listPanel.removeAll()
+        val completed = ClaudeSettings.getInstance().completedMilestones
+        // Find first incomplete milestone
+        val currentId = milestones.firstOrNull {
+            !completed.contains(it.id)
+        }?.id
+
+        for (milestone in milestones) {
+            val isCompleted = completed.contains(milestone.id)
+            val isCurrent = milestone.id == currentId
+            listPanel.add(
+                createMilestoneRow(milestone, isCompleted, isCurrent)
+            )
+        }
+        listPanel.revalidate()
+        listPanel.repaint()
+    }
+
+    private fun createMilestoneRow(
+        milestone: Milestone,
+        isCompleted: Boolean,
+        isCurrent: Boolean
+    ): JPanel {
         val row = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = JBUI.Borders.empty(8, 12, 8, 12)
             isOpaque = false
@@ -124,18 +181,46 @@ class OnboardingPanel(
             })
         }
 
-        // Left: bullet + text
+        // Left: checkmark or circle indicator
+        val checkLabel = if (isCompleted) {
+            JBLabel("\u2713").apply { // checkmark
+                foreground = CHECK_COLOR
+                font = font.deriveFont(Font.BOLD, 14f)
+            }
+        } else {
+            JBLabel("\u25CB").apply { // empty circle
+                foreground = PENDING_COLOR
+                font = font.deriveFont(14f)
+            }
+        }
+        val checkPanel = JPanel(
+            FlowLayout(FlowLayout.CENTER, 0, 0)
+        ).apply {
+            isOpaque = false
+            preferredSize = java.awt.Dimension(24, 24)
+            add(checkLabel)
+        }
+        row.add(checkPanel, BorderLayout.WEST)
+
+        // Center: text
         val textPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             isOpaque = false
         }
 
-        val titleLabel = JBLabel(item.title).apply {
-            font = font.deriveFont(Font.BOLD)
+        val titleLabel = JBLabel(milestone.title).apply {
+            font = if (isCurrent) {
+                font.deriveFont(Font.BOLD)
+            } else {
+                font.deriveFont(Font.PLAIN)
+            }
+            if (isCompleted && !isCurrent) {
+                foreground = JBColor.GRAY
+            }
         }
         textPanel.add(titleLabel)
 
-        val descLabel = JBLabel(item.description).apply {
+        val descLabel = JBLabel(milestone.description).apply {
             foreground = JBColor.GRAY
             font = font.deriveFont(font.size2D - 1f)
         }
@@ -143,8 +228,8 @@ class OnboardingPanel(
 
         row.add(textPanel, BorderLayout.CENTER)
 
-        // Right: "Show me" button (if action exists)
-        if (item.action != null) {
+        // Right: "Show me" button (if action exists and not completed)
+        if (milestone.action != null && !isCompleted) {
             val showMePanel = JPanel(
                 FlowLayout(FlowLayout.RIGHT, 0, 0)
             ).apply {
@@ -154,10 +239,18 @@ class OnboardingPanel(
                 putClientProperty("JButton.buttonType", "borderless")
                 foreground = JBColor.namedColor(
                     "Link.activeForeground",
-                    JBColor(Color(0x1A, 0x73, 0xE8), Color(0x6B, 0xB8, 0xFF))
+                    JBColor(
+                        Color(0x1A, 0x73, 0xE8),
+                        Color(0x6B, 0xB8, 0xFF)
+                    )
                 )
-                cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-                addActionListener { item.action.invoke() }
+                cursor = Cursor.getPredefinedCursor(
+                    Cursor.HAND_CURSOR
+                )
+                addActionListener {
+                    markCompleted(milestone.id)
+                    milestone.action.invoke()
+                }
             }
             showMePanel.add(showMeButton)
             row.add(showMePanel, BorderLayout.EAST)
@@ -166,9 +259,27 @@ class OnboardingPanel(
         return row
     }
 
+    /**
+     * Marks a milestone as completed and refreshes the display.
+     */
+    fun markCompleted(milestoneId: String) {
+        val settings = ClaudeSettings.getInstance()
+        if (settings.completedMilestones.add(milestoneId)) {
+            renderMilestones()
+        }
+    }
+
     private fun dismiss() {
         ClaudeSettings.getInstance().hideOnboarding = true
         onDismiss()
+    }
+
+    private fun openClaudeToolWindow() {
+        val toolWindow = ToolWindowManager.getInstance(project)
+            .getToolWindow("Claude Code") ?: return
+        toolWindow.activate {
+            markCompleted("open_claude")
+        }
     }
 
     private fun focusInput() {
@@ -176,26 +287,25 @@ class OnboardingPanel(
             .getToolWindow("Claude Code") ?: return
         toolWindow.activate {
             project.getUserData(ChatToolWindow.KEY)?.focusInput()
+            markCompleted("chat_with_claude")
         }
     }
 
-    private fun showMentionHint() {
+    private fun showSessionsHint() {
         val chat = project.getUserData(ChatToolWindow.KEY)
         if (chat != null) {
-            chat.prefillInput("@")
-            chat.focusInput()
+            // The sessions dropdown is triggered from the header in JCEF
+            // We just focus the tool window so the user can click it
+            val toolWindow = ToolWindowManager.getInstance(project)
+                .getToolWindow("Claude Code") ?: return
+            toolWindow.activate {
+                markCompleted("past_conversations")
+            }
         }
     }
 
-    private fun showSlashHint() {
-        val chat = project.getUserData(ChatToolWindow.KEY)
-        if (chat != null) {
-            chat.prefillInput("/")
-            chat.focusInput()
-        }
-    }
-
-    private data class OnboardingItem(
+    private data class Milestone(
+        val id: String,
         val title: String,
         val description: String,
         val action: (() -> Unit)?
