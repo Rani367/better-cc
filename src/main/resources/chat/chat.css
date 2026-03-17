@@ -1834,6 +1834,103 @@ html, body {
     white-space: nowrap;
 }
 
+/* ── Picker Dropdown (model, permission, thinking) ────────────── */
+.picker-dropdown {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    background: var(--app-secondary-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-medium);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+    z-index: 40;
+    margin-bottom: 4px;
+    display: none;
+    padding: 4px 0;
+}
+
+.picker-dropdown.visible {
+    display: block;
+}
+
+.picker-section-header {
+    padding: 8px 14px 4px 14px;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--app-secondary-foreground);
+    opacity: 0.7;
+    user-select: none;
+}
+
+.picker-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--app-primary-foreground);
+    border-left: 3px solid transparent;
+    transition: background 0.1s;
+}
+
+.picker-item:hover {
+    background: var(--app-ghost-button-hover-background);
+}
+
+.picker-item.active {
+    border-left-color: var(--app-claude-orange);
+    background: color-mix(in srgb, var(--app-ghost-button-hover-background), transparent 50%);
+}
+
+.picker-item.danger {
+    color: var(--app-error-foreground);
+}
+
+.picker-item.danger:hover {
+    background: color-mix(in srgb, var(--app-error-foreground), transparent 90%);
+}
+
+.picker-item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.picker-item-label {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.picker-item-desc {
+    font-size: 11px;
+    color: var(--app-secondary-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.picker-check {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--app-claude-orange);
+    display: none;
+}
+
+.picker-item.active .picker-check {
+    display: block;
+}
+
 /* ── Banners ─────────────────────────────────────────────────── */
 
 #banner-container {

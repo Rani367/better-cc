@@ -49,6 +49,7 @@ class CodeBlockRenderer(
     var attachFileHandler: ((String, String) -> Unit)? = null
     var checkoutBranchHandler: ((String) -> Unit)? = null
     var teleportHandler: ((String) -> Unit)? = null
+    var pickerSelectionHandler: ((String, String) -> Unit)? = null
 
     /**
      * JavaScript code that defines window.sendToKotlin function.
@@ -125,6 +126,15 @@ class CodeBlockRenderer(
                 }
                 "thinkingClick" -> {
                     thinkingClickHandler?.invoke()
+                }
+                "select_model", "select_permissionMode",
+                "select_thinkingMode" -> {
+                    val value =
+                        json.get("value")?.asString ?: ""
+                    val pickerId = action.removePrefix("select_")
+                    pickerSelectionHandler?.invoke(
+                        pickerId, value
+                    )
                 }
                 "copyMessage" -> {
                     val text = json.get("text")?.asString ?: return

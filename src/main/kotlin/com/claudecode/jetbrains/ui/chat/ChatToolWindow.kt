@@ -45,7 +45,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import kotlinx.coroutines.CoroutineScope
@@ -58,7 +57,6 @@ import kotlinx.coroutines.launch
 import java.awt.BorderLayout
 import java.util.concurrent.atomic.AtomicReference
 
-import javax.swing.JOptionPane
 import javax.swing.JPanel
 
 class ChatToolWindow(private val project: Project) : Disposable {
@@ -215,6 +213,15 @@ class ChatToolWindow(private val project: Project) : Disposable {
             }
         }
 
+        // Wire picker selection handler (JCEF dropdowns)
+        messageList.setPickerSelectionHandler { pickerId, value ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) {
+                    handlePickerSelection(pickerId, value)
+                }
+            }
+        }
+
         // Listen for theme changes
         ApplicationManager.getApplication().messageBus
             .connect(this)
@@ -286,6 +293,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
         messageList.setThinkingLabel(settings.thinkingMode.displayName)
         messageList.setPermissionModeLabel(settings.permissionMode.displayName)
         messageList.setSendHint(settings.useCtrlEnterToSend)
+
+        // Push picker dropdown options to JCEF
+        pushPickerOptions()
 
         // Fetch git branch in background
         ApplicationManager.getApplication().executeOnPooledThread {
@@ -619,115 +629,150 @@ class ChatToolWindow(private val project: Project) : Disposable {
     }
 
     private fun showModelPicker() {
-        // Fetch models in background, show picker when ready
+        // Picker is shown in JCEF — just trigger it via JS
+        // Options were already pushed on init
+    }
+
+    private fun showPermissionModePicker() {
+        // Picker is shown in JCEF
+    }
+
+    private fun showThinkingPicker() {
+        // Picker is shown in JCEF
+    }
+
+    /**
+     * Pushes picker option data to the JCEF webview so dropdowns
+     * can render instantly when the user clicks a footer button.
+     */
+    private fun pushPickerOptions() {
+        val gson = com.google.gson.Gson()
+
+        // Permission mode options (static)
+        val permOptions = PermissionMode.entries.map { mode ->
+            mapOf(
+                "value" to mode.cliValue,
+                "label" to mode.displayName,
+                "description" to when (mode) {
+                    PermissionMode.DEFAULT ->
+                        "Ask before each action"
+                    PermissionMode.ACCEPT_EDITS ->
+                        "Auto-accept file edits"
+                    PermissionMode.PLAN ->
+                        "Planning only, no execution"
+                    PermissionMode.DONT_ASK ->
+                        "Don't ask for permission"
+                    PermissionMode.BYPASS ->
+                        "Skip all permission prompts"
+                },
+                "danger" to (mode == PermissionMode.BYPASS)
+            )
+        }
+        messageList.setPickerOptions(
+            "permissionMode", gson.toJson(permOptions)
+        )
+        messageList.setPickerCurrent(
+            "permissionMode",
+            ClaudeSettings.getInstance().permissionMode.cliValue
+        )
+
+        // Thinking mode options (static)
+        val thinkOptions = ThinkingMode.entries.map { mode ->
+            mapOf(
+                "value" to mode.name,
+                "label" to mode.displayName,
+                "description" to when (mode) {
+                    ThinkingMode.NORMAL -> "Standard responses"
+                    ThinkingMode.THINK_HARD ->
+                        "Extended reasoning (10K tokens)"
+                    ThinkingMode.ULTRATHINK ->
+                        "Deep reasoning (50K tokens)"
+                }
+            )
+        }
+        messageList.setPickerOptions(
+            "thinkingMode", gson.toJson(thinkOptions)
+        )
+        messageList.setPickerCurrent(
+            "thinkingMode",
+            ClaudeSettings.getInstance().thinkingMode.name
+        )
+
+        // Model options (async from CLI)
         ApplicationManager.getApplication().executeOnPooledThread {
             val cliManager = ClaudeCliManager.getInstance(project)
             val cliModels = cliManager.fetchModels()
-            val options = mutableListOf("Default")
-            options.addAll(cliModels)
-
+            val modelOptions = mutableListOf(
+                mapOf(
+                    "value" to "",
+                    "label" to "Default",
+                    "description" to "Use default model"
+                )
+            )
+            for (m in cliModels) {
+                modelOptions.add(
+                    mapOf("value" to m, "label" to m)
+                )
+            }
             ApplicationManager.getApplication().invokeLater {
-                if (project.isDisposed) return@invokeLater
-                val popup = JBPopupFactory.getInstance()
-                    .createPopupChooserBuilder(options)
-                    .setTitle("Select Model")
-                    .setItemChosenCallback { selected ->
-                        val modelValue =
-                            if (selected == "Default") "" else selected
-                        ClaudeSettings.getInstance().selectedModel =
-                            modelValue
-                        stateService.setActiveModel(modelValue)
-                        messageList.setModelLabel(
-                            modelDisplayText(modelValue)
-                        )
-                    }
-                    .createPopup()
-                popup.showInCenterOf(rootPanel)
+                if (!project.isDisposed) {
+                    messageList.setPickerOptions(
+                        "model", gson.toJson(modelOptions)
+                    )
+                    messageList.setPickerCurrent(
+                        "model",
+                        ClaudeSettings.getInstance().selectedModel
+                    )
+                }
             }
         }
     }
 
-    private fun showPermissionModePicker() {
-        val options = PermissionMode.entries.toList()
-        val popup = JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(options)
-            .setTitle("Permission Mode")
-            .setRenderer(object : javax.swing.DefaultListCellRenderer() {
-                override fun getListCellRendererComponent(
-                    list: javax.swing.JList<*>?,
-                    value: Any?,
-                    index: Int,
-                    isSelected: Boolean,
-                    cellHasFocus: Boolean
-                ): java.awt.Component {
-                    super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus
-                    )
-                    text = (value as? PermissionMode)?.displayName
-                        ?: value.toString()
-                    return this
-                }
-            })
-            .setItemChosenCallback { selected ->
-                if (selected == PermissionMode.BYPASS) {
-                    val settings = ClaudeSettings.getInstance()
-                    if (!settings.allowDangerouslySkipPermissions) {
-                        JOptionPane.showMessageDialog(
-                            rootPanel,
-                            "Bypass mode is not enabled.\n" +
-                                "Enable 'allowDangerouslySkipPermissions' " +
-                                "in settings first.",
-                            "Bypass Not Allowed",
-                            JOptionPane.WARNING_MESSAGE
-                        )
-                        return@setItemChosenCallback
+    /**
+     * Handles a picker selection from the JCEF dropdown.
+     */
+    fun handlePickerSelection(pickerId: String, value: String) {
+        when (pickerId) {
+            "model" -> {
+                ClaudeSettings.getInstance().selectedModel = value
+                stateService.setActiveModel(value)
+                messageList.setModelLabel(modelDisplayText(value))
+                messageList.setPickerCurrent("model", value)
+            }
+            "permissionMode" -> {
+                val mode = PermissionMode.fromCliValue(value)
+                if (mode == PermissionMode.BYPASS) {
+                    if (!ClaudeSettings.getInstance()
+                            .allowDangerouslySkipPermissions
+                    ) {
+                        return
                     }
                 }
-                ClaudeSettings.getInstance().permissionMode = selected
-                messageList.setPermissionModeLabel(selected.displayName)
-                // Update spinner color per permission mode
-                val spinnerColor = when (selected) {
+                ClaudeSettings.getInstance().permissionMode = mode
+                messageList.setPermissionModeLabel(mode.displayName)
+                messageList.setPickerCurrent(
+                    "permissionMode", value
+                )
+                val spinnerColor = when (mode) {
                     PermissionMode.DEFAULT -> "#da7756"
-                    PermissionMode.ACCEPT_EDITS -> "var(--app-fg)"
+                    PermissionMode.ACCEPT_EDITS ->
+                        "var(--app-fg)"
                     PermissionMode.PLAN ->
                         "var(--app-button-background)"
                     PermissionMode.BYPASS ->
                         "var(--app-error-foreground)"
-                    else -> "var(--app-secondary-foreground)"
+                    else ->
+                        "var(--app-secondary-foreground)"
                 }
                 messageList.setSpinnerColor(spinnerColor)
             }
-            .createPopup()
-        popup.showInCenterOf(rootPanel)
-    }
-
-    private fun showThinkingPicker() {
-        val options = ThinkingMode.entries.toList()
-        val popup = JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(options)
-            .setTitle("Thinking Mode")
-            .setRenderer(object : javax.swing.DefaultListCellRenderer() {
-                override fun getListCellRendererComponent(
-                    list: javax.swing.JList<*>?,
-                    value: Any?,
-                    index: Int,
-                    isSelected: Boolean,
-                    cellHasFocus: Boolean
-                ): java.awt.Component {
-                    super.getListCellRendererComponent(
-                        list, value, index, isSelected, cellHasFocus
-                    )
-                    text = (value as? ThinkingMode)?.displayName
-                        ?: value.toString()
-                    return this
-                }
-            })
-            .setItemChosenCallback { selected ->
-                ClaudeSettings.getInstance().thinkingMode = selected
-                messageList.setThinkingLabel(selected.displayName)
+            "thinkingMode" -> {
+                val mode = ThinkingMode.fromName(value)
+                ClaudeSettings.getInstance().thinkingMode = mode
+                messageList.setThinkingLabel(mode.displayName)
+                messageList.setPickerCurrent("thinkingMode", value)
             }
-            .createPopup()
-        popup.showInCenterOf(rootPanel)
+        }
     }
 
     private fun sendMessage(text: String) {

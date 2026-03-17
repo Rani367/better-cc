@@ -1329,22 +1329,174 @@ function setSpinnerColor(cssColor) {
     );
 }
 
-function handleModelClick() {
-    if (sendToKotlin) {
-        sendToKotlin(JSON.stringify({ action: 'modelClick' }));
+// ── Picker Dropdown System ────────────────────────────────────────
+
+var _pickerOptions = {
+    model: [],
+    permissionMode: [],
+    thinkingMode: []
+};
+var _pickerCurrent = {
+    model: '',
+    permissionMode: 'default',
+    thinkingMode: 'NORMAL'
+};
+var _activePickerId = null;
+
+function setPickerOptions(pickerId, optionsJson) {
+    try {
+        _pickerOptions[pickerId] = JSON.parse(optionsJson);
+    } catch (e) {
+        _pickerOptions[pickerId] = [];
     }
+}
+
+function setPickerCurrent(pickerId, value) {
+    _pickerCurrent[pickerId] = value;
+}
+
+var _checkSvg = '<svg class="picker-check" viewBox="0 0 16 16"' +
+    ' fill="currentColor"><path d="M13.78 4.22a.75.75 0 010' +
+    ' 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75' +
+    ' 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"' +
+    '/></svg>';
+
+function showPickerDropdown(pickerId, anchorId) {
+    // Close any existing picker first
+    dismissPickerDropdown();
+
+    var items = _pickerOptions[pickerId];
+    if (!items || items.length === 0) {
+        // Fallback: tell Kotlin to handle it
+        if (sendToKotlin) {
+            sendToKotlin(JSON.stringify({
+                action: pickerId + 'Click'
+            }));
+        }
+        return;
+    }
+
+    var anchor = document.getElementById(anchorId);
+    var inputArea = document.getElementById('input-area') ||
+        anchor.closest('.input-footer') ||
+        anchor.parentElement;
+
+    var dropdown = document.createElement('div');
+    dropdown.id = 'picker-dropdown';
+    dropdown.className = 'picker-dropdown';
+
+    var currentVal = _pickerCurrent[pickerId] || '';
+    var lastGroup = null;
+
+    for (var i = 0; i < items.length; i++) {
+        var opt = items[i];
+
+        // Section header
+        if (opt.group && opt.group !== lastGroup) {
+            lastGroup = opt.group;
+            var header = document.createElement('div');
+            header.className = 'picker-section-header';
+            header.textContent = opt.group;
+            dropdown.appendChild(header);
+        }
+
+        var item = document.createElement('div');
+        item.className = 'picker-item';
+        if (opt.value === currentVal) {
+            item.classList.add('active');
+        }
+        if (opt.danger) {
+            item.classList.add('danger');
+        }
+
+        var contentDiv = document.createElement('div');
+        contentDiv.className = 'picker-item-content';
+
+        var labelSpan = document.createElement('span');
+        labelSpan.className = 'picker-item-label';
+        labelSpan.textContent = opt.label;
+        contentDiv.appendChild(labelSpan);
+
+        if (opt.description) {
+            var descSpan = document.createElement('span');
+            descSpan.className = 'picker-item-desc';
+            descSpan.textContent = opt.description;
+            contentDiv.appendChild(descSpan);
+        }
+
+        item.appendChild(contentDiv);
+        item.innerHTML += _checkSvg;
+
+        (function(val, pid) {
+            item.addEventListener('click', function() {
+                dismissPickerDropdown();
+                if (sendToKotlin) {
+                    sendToKotlin(JSON.stringify({
+                        action: 'select_' + pid,
+                        value: val
+                    }));
+                }
+            });
+        })(opt.value, pickerId);
+
+        dropdown.appendChild(item);
+    }
+
+    // Position inside .input-wrapper (same parent as slash dropdown)
+    var wrapper = document.querySelector('.input-wrapper');
+    if (wrapper) {
+        wrapper.appendChild(dropdown);
+    } else {
+        // Fallback
+        var parent = anchor.parentElement;
+        parent.style.position = 'relative';
+        parent.appendChild(dropdown);
+    }
+
+    // Show with slight delay for animation
+    requestAnimationFrame(function() {
+        dropdown.classList.add('visible');
+    });
+    _activePickerId = pickerId;
+
+    // Click outside dismisses
+    setTimeout(function() {
+        document.addEventListener('click', _pickerOutsideClick);
+        document.addEventListener('keydown', _pickerEscapeHandler);
+    }, 10);
+}
+
+function _pickerOutsideClick(e) {
+    var dropdown = document.getElementById('picker-dropdown');
+    if (dropdown && !dropdown.contains(e.target)) {
+        dismissPickerDropdown();
+    }
+}
+
+function _pickerEscapeHandler(e) {
+    if (e.key === 'Escape') {
+        dismissPickerDropdown();
+    }
+}
+
+function dismissPickerDropdown() {
+    var dropdown = document.getElementById('picker-dropdown');
+    if (dropdown) dropdown.remove();
+    _activePickerId = null;
+    document.removeEventListener('click', _pickerOutsideClick);
+    document.removeEventListener('keydown', _pickerEscapeHandler);
+}
+
+function handleModelClick() {
+    showPickerDropdown('model', 'model-btn');
 }
 
 function handlePermissionModeClick() {
-    if (sendToKotlin) {
-        sendToKotlin(JSON.stringify({ action: 'permissionModeClick' }));
-    }
+    showPickerDropdown('permissionMode', 'permission-mode-btn');
 }
 
 function handleThinkingClick() {
-    if (sendToKotlin) {
-        sendToKotlin(JSON.stringify({ action: 'thinkingClick' }));
-    }
+    showPickerDropdown('thinkingMode', 'thinking-btn');
 }
 
 function setBranchPill(branchName) {

@@ -251,6 +251,12 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         codeBlockRenderer?.teleportHandler = handler
     }
 
+    fun setPickerSelectionHandler(
+        handler: (String, String) -> Unit
+    ) {
+        codeBlockRenderer?.pickerSelectionHandler = handler
+    }
+
     // ── Header/input state updates (JS bridge) ─────────────────────
 
     fun setSessionTitle(title: String) {
@@ -315,6 +321,24 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         } else {
             executeJS("setTeleportLabel(null)")
         }
+    }
+
+    // ── Picker dropdown bridge methods ─────────────────────────
+
+    fun setPickerOptions(pickerId: String, optionsJson: String) {
+        executeJS(
+            "setPickerOptions(" +
+                "${jsStringEscape(pickerId)}, " +
+                "${jsStringEscape(optionsJson)})"
+        )
+    }
+
+    fun setPickerCurrent(pickerId: String, value: String) {
+        executeJS(
+            "setPickerCurrent(" +
+                "${jsStringEscape(pickerId)}, " +
+                "${jsStringEscape(value)})"
+        )
     }
 
     // ── Thinking block bridge methods ────────────────────────────
