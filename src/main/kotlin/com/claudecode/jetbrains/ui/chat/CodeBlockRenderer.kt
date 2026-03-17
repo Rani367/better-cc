@@ -62,7 +62,10 @@ class CodeBlockRenderer(
             null
         }
 
-        val queryCall = jsQuery.inject("' + request + '")
+        // Build the bridge: JS sendToKotlin(jsonString) → Kotlin handleRequest
+        // inject() expects a JS expression that evaluates to a string.
+        // We pass the variable name directly and let inject() wrap it.
+        val queryCall = jsQuery.inject("request")
         injectionJs = "window.sendToKotlin = function(request) { $queryCall };"
     }
 
