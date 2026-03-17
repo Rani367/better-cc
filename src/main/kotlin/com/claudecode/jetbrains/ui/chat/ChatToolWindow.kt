@@ -123,11 +123,20 @@ class ChatToolWindow(private val project: Project) : Disposable {
         }
 
         // Wire retry handler (from hover actions)
-        messageList.setRetryHandler { _ ->
-            val lastUserMsg = conversationMessages
-                .lastOrNull { it.sender == MessageSender.USER }
-            if (lastUserMsg != null) {
-                sendMessage(lastUserMsg.text)
+        messageList.setRetryHandler { messageId ->
+            // Find the user message that preceded this assistant message
+            val msgIdx = conversationMessages.indexOfFirst {
+                it.id == messageId
+            }
+            val userMsg = if (msgIdx > 0) {
+                conversationMessages.subList(0, msgIdx)
+                    .lastOrNull { it.sender == MessageSender.USER }
+            } else {
+                conversationMessages
+                    .lastOrNull { it.sender == MessageSender.USER }
+            }
+            if (userMsg != null) {
+                sendMessage(userMsg.text)
             }
         }
 
