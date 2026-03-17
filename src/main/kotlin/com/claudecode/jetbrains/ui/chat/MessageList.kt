@@ -166,6 +166,25 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         }
     }
 
+    fun setToolDiffStats(
+        toolId: String,
+        additions: Int,
+        deletions: Int,
+        filePath: String?
+    ) {
+        if (browser != null) {
+            val id = jsStringEscape(toolId)
+            val path = if (filePath != null) {
+                jsStringEscape(filePath)
+            } else {
+                "null"
+            }
+            executeJS(
+                "setToolDiffStats($id, $additions, $deletions, $path)"
+            )
+        }
+    }
+
     fun addPermissionCard(request: PermissionRequest) {
         hasMessages = true
         if (browser != null) {

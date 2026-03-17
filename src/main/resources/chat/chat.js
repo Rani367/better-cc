@@ -406,6 +406,48 @@ function updateToolBlock(id, summary, isRunning) {
     scrollToBottom();
 }
 
+function setToolDiffStats(id, additions, deletions, filePath) {
+    var el = document.getElementById('tool-' + id);
+    if (!el) return;
+    var header = el.querySelector('.tool-header');
+    if (!header) return;
+    // Remove existing diff stats
+    var existing = header.querySelector('.tool-diff-stats');
+    if (existing) existing.remove();
+    var stats = document.createElement('span');
+    stats.className = 'tool-diff-stats';
+    stats.innerHTML = '<span class="diff-add">+' + additions +
+        '</span> <span class="diff-del">-' + deletions + '</span>';
+    // Insert before chevron
+    var chevron = header.querySelector('.tool-chevron');
+    if (chevron) {
+        header.insertBefore(stats, chevron);
+    } else {
+        header.appendChild(stats);
+    }
+    // Add View Diff button if we have a file path
+    if (filePath) {
+        var bodyEl = el.querySelector('.tool-body');
+        if (bodyEl) {
+            var existing2 = bodyEl.querySelector('.tool-diff-btn');
+            if (!existing2) {
+                var btn = document.createElement('button');
+                btn.className = 'tool-diff-btn';
+                btn.textContent = 'View Diff';
+                btn.onclick = function() {
+                    if (sendToKotlin) {
+                        sendToKotlin(JSON.stringify({
+                            action: 'openFile',
+                            path: filePath
+                        }));
+                    }
+                };
+                bodyEl.appendChild(btn);
+            }
+        }
+    }
+}
+
 function setToolBlockBody(id, text) {
     var el = document.getElementById('tool-' + id);
     if (!el) return;

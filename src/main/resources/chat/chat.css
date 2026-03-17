@@ -827,6 +827,36 @@ html, body {
     transform: rotate(90deg);
 }
 
+.tool-diff-stats {
+    font-size: 0.8em;
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+.tool-diff-stats .diff-add {
+    color: var(--app-success-foreground);
+}
+
+.tool-diff-stats .diff-del {
+    color: var(--app-error-foreground);
+}
+
+.tool-diff-btn {
+    display: block;
+    margin: 6px 8px;
+    padding: 4px 10px;
+    font-size: 0.8em;
+    background: var(--app-button-background);
+    color: var(--app-button-foreground);
+    border: none;
+    border-radius: var(--corner-radius-small);
+    cursor: pointer;
+}
+
+.tool-diff-btn:hover {
+    opacity: 0.9;
+}
+
 /* ── Tool Body Grid (toolBodyGrid_ZUQaOA) ───────────────────── */
 .tool-body {
     display: none;
