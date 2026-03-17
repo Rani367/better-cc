@@ -1176,8 +1176,13 @@ function showEmptyState(visible) {
 // ── Header Functions ────────────────────────────────────────────────
 
 function handleSessionsClick() {
-    if (sendToKotlin) {
-        sendToKotlin(JSON.stringify({ action: 'sessionsClick' }));
+    if (_sessionListVisible) {
+        hideSessionList();
+    } else {
+        // Request fresh session data from Kotlin
+        if (sendToKotlin) {
+            sendToKotlin(JSON.stringify({ action: 'requestSessions' }));
+        }
     }
 }
 
@@ -1821,6 +1826,28 @@ function _initPage() {
     var sendBtn = document.getElementById('send-btn');
     if (sendBtn) sendBtn.addEventListener('click', handleSend);
 
+    // Session list search
+    var sessionSearch = document.getElementById('session-search');
+    if (sessionSearch) {
+        sessionSearch.addEventListener('input', function() {
+            _filterSessions(this.value);
+        });
+        sessionSearch.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                hideSessionList();
+            }
+        });
+    }
+
+    // Global Escape to close session list
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && _sessionListVisible) {
+            e.preventDefault();
+            hideSessionList();
+        }
+    });
+
     // File attachments
     _setupDragAndDrop();
     _setupClipboardPaste();
@@ -1859,4 +1886,264 @@ function handleTeleport() {
             target: _teleportTarget
         }));
     }
+}
+
+// ── Inline Session List ───────────────────────────────────────────
+
+var _sessionListVisible = false;
+var _sessionData = [];
+
+function showSessionList() {
+    _sessionListVisible = true;
+    var sl = document.getElementById('session-list');
+    if (sl) sl.style.display = 'flex';
+    var msgs = document.getElementById('messages');
+    if (msgs) msgs.style.display = 'none';
+    var es = document.getElementById('empty-state');
+    if (es) es.style.display = 'none';
+    var th = document.getElementById('thinking');
+    if (th) th.style.display = 'none';
+    var grad = document.querySelector('.message-gradient');
+    if (grad) grad.style.display = 'none';
+    var input = document.getElementById('input-area');
+    if (input) input.style.display = 'none';
+    var btn = document.getElementById('sessions-button');
+    if (btn) btn.classList.add('active');
+    var search = document.getElementById('session-search');
+    if (search) { search.value = ''; search.focus(); }
+}
+
+function hideSessionList() {
+    _sessionListVisible = false;
+    var sl = document.getElementById('session-list');
+    if (sl) sl.style.display = 'none';
+    var input = document.getElementById('input-area');
+    if (input) input.style.display = '';
+    var grad = document.querySelector('.message-gradient');
+    if (grad) grad.style.display = '';
+    var btn = document.getElementById('sessions-button');
+    if (btn) btn.classList.remove('active');
+    // Restore messages or empty state
+    var msgs = document.getElementById('messages');
+    if (msgs && msgs.children.length > 0) {
+        msgs.style.display = 'flex';
+    } else {
+        var es = document.getElementById('empty-state');
+        if (es) es.style.display = 'flex';
+    }
+}
+
+function populateSessionList(jsonStr) {
+    try {
+        _sessionData = JSON.parse(jsonStr);
+    } catch (e) {
+        _sessionData = [];
+    }
+    showSessionList();
+    _renderSessionItems(_sessionData);
+}
+
+function _filterSessions(query) {
+    var q = (query || '').toLowerCase();
+    if (!q) {
+        _renderSessionItems(_sessionData);
+        return;
+    }
+    var filtered = _sessionData.filter(function(s) {
+        return (s.title || '').toLowerCase().indexOf(q) >= 0
+            || (s.firstPrompt || '').toLowerCase().indexOf(q) >= 0;
+    });
+    _renderSessionItems(filtered);
+}
+
+function _renderSessionItems(sessions) {
+    var container = document.getElementById('session-items');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!sessions || sessions.length === 0) {
+        container.innerHTML = '<div class="session-empty">No conversations found</div>';
+        return;
+    }
+
+    var groups = _groupSessionsByTime(sessions);
+    for (var g = 0; g < groups.length; g++) {
+        var group = groups[g];
+        var header = document.createElement('div');
+        header.className = 'session-group-header';
+        header.textContent = group.label;
+        container.appendChild(header);
+
+        for (var i = 0; i < group.items.length; i++) {
+            container.appendChild(_buildSessionRow(group.items[i]));
+        }
+    }
+}
+
+function _buildSessionRow(session) {
+    var row = document.createElement('div');
+    row.className = 'session-row';
+    row.setAttribute('data-session-id', session.id);
+
+    // Status dot
+    var dot = document.createElement('span');
+    dot.className = 'session-status-dot';
+    if (session.state === 'THINKING') dot.classList.add('thinking');
+    else if (session.state === 'WAITING_FOR_PERMISSION') dot.classList.add('permission');
+    row.appendChild(dot);
+
+    // Info
+    var info = document.createElement('div');
+    info.className = 'session-info';
+
+    var title = document.createElement('div');
+    title.className = 'session-title';
+    title.textContent = session.title || 'Untitled';
+    info.appendChild(title);
+
+    var meta = document.createElement('div');
+    meta.className = 'session-meta';
+    var timeStr = _formatSessionTime(session.lastActiveTime);
+    meta.textContent = timeStr + (session.model ? ' | ' + session.model : '');
+    info.appendChild(meta);
+
+    if (session.firstPrompt) {
+        var preview = document.createElement('div');
+        preview.className = 'session-preview';
+        preview.textContent = session.firstPrompt.substring(0, 80).replace(/\n/g, ' ');
+        info.appendChild(preview);
+    }
+
+    row.appendChild(info);
+
+    // Actions (rename + delete)
+    var actions = document.createElement('div');
+    actions.className = 'session-actions';
+
+    var renameBtn = document.createElement('button');
+    renameBtn.className = 'session-action-btn';
+    renameBtn.title = 'Rename';
+    renameBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11.5 1.5l3 3-9 9H2.5v-3l9-9z"/></svg>';
+    renameBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        _handleSessionRename(session.id, session.title, row);
+    });
+    actions.appendChild(renameBtn);
+
+    var deleteBtn = document.createElement('button');
+    deleteBtn.className = 'session-action-btn delete';
+    deleteBtn.title = 'Delete';
+    deleteBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M5.3 4V2.7a1 1 0 011-1h3.4a1 1 0 011 1V4M6.3 7v5M9.7 7v5"/><path d="M3.3 4l.7 9.3a1 1 0 001 .7h6a1 1 0 001-.7L12.7 4"/></svg>';
+    deleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        _handleSessionDelete(session.id, session.title, row);
+    });
+    actions.appendChild(deleteBtn);
+
+    row.appendChild(actions);
+
+    // Click to resume
+    row.addEventListener('click', function() {
+        if (sendToKotlin) {
+            sendToKotlin(JSON.stringify({ action: 'sessionResume', sessionId: session.id }));
+        }
+    });
+
+    return row;
+}
+
+function _groupSessionsByTime(sessions) {
+    var now = new Date();
+    var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var yesterdayStart = todayStart - 86400000;
+    var weekAgo = todayStart - 7 * 86400000;
+
+    var today = [], yesterday = [], lastWeek = [], older = [];
+    for (var i = 0; i < sessions.length; i++) {
+        var t = sessions[i].lastActiveTime;
+        if (t >= todayStart) today.push(sessions[i]);
+        else if (t >= yesterdayStart) yesterday.push(sessions[i]);
+        else if (t >= weekAgo) lastWeek.push(sessions[i]);
+        else older.push(sessions[i]);
+    }
+
+    var groups = [];
+    if (today.length) groups.push({ label: 'Today', items: today });
+    if (yesterday.length) groups.push({ label: 'Yesterday', items: yesterday });
+    if (lastWeek.length) groups.push({ label: 'Last 7 Days', items: lastWeek });
+    if (older.length) groups.push({ label: 'Older', items: older });
+    return groups;
+}
+
+function _formatSessionTime(ms) {
+    if (!ms) return '';
+    var d = new Date(ms);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    var mStr = m < 10 ? '0' + m : '' + m;
+    return months[d.getMonth()] + ' ' + d.getDate() + ', ' + h + ':' + mStr + ' ' + ampm;
+}
+
+function _handleSessionRename(sessionId, currentTitle, row) {
+    var titleEl = row.querySelector('.session-title');
+    if (!titleEl) return;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'session-rename-input';
+    input.value = currentTitle || '';
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    var committed = false;
+    function commit() {
+        if (committed) return;
+        committed = true;
+        var newTitle = input.value.trim();
+        if (newTitle && newTitle !== currentTitle && sendToKotlin) {
+            sendToKotlin(JSON.stringify({ action: 'sessionRename', sessionId: sessionId, newTitle: newTitle }));
+        } else {
+            // Revert
+            var span = document.createElement('div');
+            span.className = 'session-title';
+            span.textContent = currentTitle || 'Untitled';
+            input.replaceWith(span);
+        }
+    }
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') { e.preventDefault(); committed = true; var span = document.createElement('div'); span.className = 'session-title'; span.textContent = currentTitle || 'Untitled'; input.replaceWith(span); }
+    });
+    input.addEventListener('blur', commit);
+}
+
+function _handleSessionDelete(sessionId, title, row) {
+    var overlay = document.createElement('div');
+    overlay.className = 'session-delete-confirm';
+    overlay.innerHTML = '<span>Delete?</span>';
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        overlay.remove();
+    });
+
+    var confirmBtn = document.createElement('button');
+    confirmBtn.className = 'confirm-delete';
+    confirmBtn.textContent = 'Delete';
+    confirmBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (sendToKotlin) {
+            sendToKotlin(JSON.stringify({ action: 'sessionDelete', sessionId: sessionId }));
+        }
+    });
+
+    overlay.appendChild(cancelBtn);
+    overlay.appendChild(confirmBtn);
+    row.appendChild(overlay);
 }

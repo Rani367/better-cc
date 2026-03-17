@@ -37,8 +37,8 @@ import com.claudecode.jetbrains.ui.diff.DiffPreviewPanel
 import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
 
 import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
-import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
 import com.claudecode.jetbrains.ui.sessions.SessionState
+import com.google.gson.Gson
 import com.claudecode.jetbrains.ui.sessions.SessionTabManager
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
@@ -62,6 +62,7 @@ import javax.swing.JPanel
 class ChatToolWindow(private val project: Project) : Disposable {
 
     private val logger = Logger.getInstance(ChatToolWindow::class.java)
+    private val gson = Gson()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val stateService = ClaudeStateService.getInstance(project)
@@ -163,9 +164,34 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 startNewConversation()
             }
         }
-        messageList.setSessionsClickHandler {
+        messageList.setSessionRequestHandler {
             ApplicationManager.getApplication().invokeLater {
                 showSessionHistory()
+            }
+        }
+        messageList.setSessionResumeHandler { sessionId ->
+            ApplicationManager.getApplication().invokeLater {
+                val session = SessionManager.getInstance(project).getSession(sessionId)
+                if (session != null) {
+                    messageList.hideSessionList()
+                    resumeSession(session)
+                }
+            }
+        }
+        messageList.setSessionRenameHandler { sessionId, newTitle ->
+            ApplicationManager.getApplication().executeOnPooledThread {
+                SessionManager.getInstance(project).renameSession(sessionId, newTitle)
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) showSessionHistory()
+                }
+            }
+        }
+        messageList.setSessionDeleteHandler { sessionId ->
+            ApplicationManager.getApplication().executeOnPooledThread {
+                SessionManager.getInstance(project).removeSession(sessionId)
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) showSessionHistory()
+                }
             }
         }
         messageList.setSettingsHandler {
@@ -357,12 +383,22 @@ class ChatToolWindow(private val project: Project) : Disposable {
     // ── Session management ───────────────────────────────────
 
     private fun showSessionHistory() {
-        val panel = SessionHistoryPanel(
-            project,
-            onNewConversation = { startNewConversation() },
-            onResumeSession = { session -> resumeSession(session) }
-        )
-        panel.show(rootPanel)
+        val sessionManager = SessionManager.getInstance(project)
+        val sessions = sessionManager.listSessions()
+
+        val sessionsJson = gson.toJson(sessions.map { session ->
+            val state = stateService.getSessionState(session.id)
+            mapOf(
+                "id" to session.id,
+                "title" to session.displayTitle(),
+                "firstPrompt" to session.firstPrompt,
+                "lastActiveTime" to session.lastActiveTime,
+                "model" to session.model,
+                "state" to state.name
+            )
+        })
+
+        messageList.populateSessionList(sessionsJson)
     }
 
     /**
@@ -378,6 +414,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
+            messageList.hideSessionList()
             messageList.clearMessages()
             messageList.setSessionTitle("New Conversation")
             messageList.setInputEnabled(true)
@@ -736,6 +773,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 stateService.setActiveModel(value)
                 messageList.setModelLabel(modelDisplayText(value))
                 messageList.setPickerCurrent("model", value)
+                restartProcessForSettingChange()
             }
             "permissionMode" -> {
                 val mode = PermissionMode.fromCliValue(value)
@@ -763,12 +801,29 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         "var(--app-secondary-foreground)"
                 }
                 messageList.setSpinnerColor(spinnerColor)
+                restartProcessForSettingChange()
             }
             "thinkingMode" -> {
                 val mode = ThinkingMode.fromName(value)
                 ClaudeSettings.getInstance().thinkingMode = mode
                 messageList.setThinkingLabel(mode.displayName)
                 messageList.setPickerCurrent("thinkingMode", value)
+                restartProcessForSettingChange()
+            }
+        }
+    }
+
+    /**
+     * Destroys the running CLI process so the next message
+     * spawns a fresh one with updated CLI flags (permission mode,
+     * model, thinking budget). Sets isResumedSession so the new
+     * process resumes the same conversation via --resume.
+     */
+    private fun restartProcessForSettingChange() {
+        if (claudeProcess != null && claudeProcess?.isRunning == true) {
+            destroyProcess()
+            if (currentSessionId != null) {
+                isResumedSession = true
             }
         }
     }

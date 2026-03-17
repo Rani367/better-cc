@@ -2034,3 +2034,237 @@ html, body {
         display: none !important;
     }
 }
+
+/* ── Inline Session List ───────────────────────────────────── */
+
+#session-list {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.session-list-toolbar {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--app-primary-border-color);
+    flex-shrink: 0;
+}
+
+.session-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--app-input-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    gap: 6px;
+}
+
+.session-search-wrapper:focus-within {
+    border-color: var(--app-input-active-border);
+}
+
+#session-search {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--app-primary-foreground);
+    font-size: var(--app-chat-font-size, 13px);
+    font-family: inherit;
+}
+
+#session-search::placeholder {
+    color: var(--app-secondary-foreground);
+}
+
+.session-search-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    opacity: 0.5;
+}
+
+.session-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.session-items::-webkit-scrollbar { width: 6px; }
+.session-items::-webkit-scrollbar-track { background: transparent; }
+.session-items::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb, rgba(128,128,128,0.3));
+    border-radius: 3px;
+}
+
+.session-group-header {
+    padding: 10px 16px 4px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--app-secondary-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    user-select: none;
+}
+
+.session-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    cursor: pointer;
+    gap: 10px;
+    position: relative;
+}
+
+.session-row:hover {
+    background: var(--app-ghost-button-hover-background);
+}
+
+.session-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--app-success-foreground);
+}
+
+.session-status-dot.thinking { background: var(--app-claude-orange); }
+.session-status-dot.permission { background: var(--app-warning-accent); }
+
+.session-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.session-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--app-chat-font-size, 13px);
+    color: var(--app-primary-foreground);
+}
+
+.session-meta {
+    font-size: 0.8em;
+    color: var(--app-secondary-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.session-preview {
+    font-size: 0.8em;
+    color: var(--app-secondary-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0.7;
+}
+
+.session-actions {
+    display: none;
+    flex-shrink: 0;
+    gap: 4px;
+}
+
+.session-row:hover .session-actions {
+    display: flex;
+}
+
+.session-action-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--app-secondary-foreground);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.session-action-btn:hover {
+    background: var(--app-ghost-button-hover-background);
+    color: var(--app-primary-foreground);
+}
+
+.session-action-btn.delete:hover {
+    color: var(--app-error-foreground);
+}
+
+.session-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--app-secondary-foreground);
+    font-size: var(--app-chat-font-size, 13px);
+}
+
+#sessions-button.active {
+    background: var(--app-ghost-button-hover-background);
+}
+
+#sessions-button.active .sessions-button-icon {
+    transform: rotate(180deg);
+    transition: transform 0.15s ease;
+}
+
+.sessions-button-icon {
+    transition: transform 0.15s ease;
+}
+
+.session-rename-input {
+    border: 1px solid var(--app-input-active-border);
+    background: var(--app-input-background);
+    color: var(--app-primary-foreground);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: inherit;
+    font-family: inherit;
+    width: 100%;
+    outline: none;
+}
+
+.session-delete-confirm {
+    position: absolute;
+    inset: 0;
+    background: var(--app-primary-background);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    font-size: 0.9em;
+    color: var(--app-primary-foreground);
+    z-index: 1;
+}
+
+.session-delete-confirm button {
+    padding: 4px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--app-input-border);
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    background: transparent;
+    color: var(--app-primary-foreground);
+}
+
+.session-delete-confirm button:hover {
+    background: var(--app-ghost-button-hover-background);
+}
+
+.session-delete-confirm .confirm-delete {
+    background: var(--app-error-foreground);
+    color: #fff;
+    border-color: transparent;
+}
+
+.session-delete-confirm .confirm-delete:hover {
+    opacity: 0.9;
+}

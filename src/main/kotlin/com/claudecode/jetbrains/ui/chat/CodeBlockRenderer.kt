@@ -41,6 +41,10 @@ class CodeBlockRenderer(
     var sendMessageHandler: ((String) -> Unit)? = null
     var newConversationHandler: (() -> Unit)? = null
     var sessionsClickHandler: (() -> Unit)? = null
+    var sessionRequestHandler: (() -> Unit)? = null
+    var sessionResumeHandler: ((String) -> Unit)? = null
+    var sessionRenameHandler: ((String, String) -> Unit)? = null
+    var sessionDeleteHandler: ((String) -> Unit)? = null
     var settingsHandler: (() -> Unit)? = null
     var slashCommandHandler: ((String) -> Unit)? = null
     var modelClickHandler: (() -> Unit)? = null
@@ -110,6 +114,22 @@ class CodeBlockRenderer(
                 }
                 "sessionsClick" -> {
                     sessionsClickHandler?.invoke()
+                }
+                "requestSessions" -> {
+                    sessionRequestHandler?.invoke()
+                }
+                "sessionResume" -> {
+                    val sessionId = json.get("sessionId")?.asString ?: return
+                    sessionResumeHandler?.invoke(sessionId)
+                }
+                "sessionRename" -> {
+                    val sessionId = json.get("sessionId")?.asString ?: return
+                    val newTitle = json.get("newTitle")?.asString ?: return
+                    sessionRenameHandler?.invoke(sessionId, newTitle)
+                }
+                "sessionDelete" -> {
+                    val sessionId = json.get("sessionId")?.asString ?: return
+                    sessionDeleteHandler?.invoke(sessionId)
                 }
                 "settings" -> {
                     settingsHandler?.invoke()

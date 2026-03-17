@@ -227,6 +227,22 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         codeBlockRenderer?.sessionsClickHandler = handler
     }
 
+    fun setSessionRequestHandler(handler: () -> Unit) {
+        codeBlockRenderer?.sessionRequestHandler = handler
+    }
+
+    fun setSessionResumeHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.sessionResumeHandler = handler
+    }
+
+    fun setSessionRenameHandler(handler: (String, String) -> Unit) {
+        codeBlockRenderer?.sessionRenameHandler = handler
+    }
+
+    fun setSessionDeleteHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.sessionDeleteHandler = handler
+    }
+
     fun setSettingsHandler(handler: () -> Unit) {
         codeBlockRenderer?.settingsHandler = handler
     }
@@ -313,6 +329,14 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         } else {
             executeJS("setBranchPill(null)")
         }
+    }
+
+    fun populateSessionList(sessionsJson: String) {
+        executeJS("populateSessionList(${jsStringEscape(sessionsJson)})")
+    }
+
+    fun hideSessionList() {
+        executeJS("hideSessionList()")
     }
 
     fun setTeleportLabel(target: String?) {
@@ -558,6 +582,18 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
   ╰─────────╯</div>
                             <div class="empty-prompt">What can I help you with?</div>
                         </div>
+                    </div>
+                    <!-- Inline session list -->
+                    <div id="session-list" style="display:none">
+                        <div class="session-list-toolbar">
+                            <div class="session-search-wrapper">
+                                <svg class="session-search-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3 3"/>
+                                </svg>
+                                <input type="text" id="session-search" placeholder="Search conversations..." />
+                            </div>
+                        </div>
+                        <div id="session-items" class="session-items"></div>
                     </div>
                     <!-- Messages -->
                     <div id="messages"></div>
