@@ -1385,6 +1385,9 @@ function showPickerDropdown(pickerId, anchorId) {
     dropdown.id = 'picker-dropdown';
     dropdown.className = 'picker-dropdown';
 
+    var list = document.createElement('div');
+    list.className = 'picker-list';
+
     var currentVal = _pickerCurrent[pickerId] || '';
     var lastGroup = null;
 
@@ -1397,7 +1400,7 @@ function showPickerDropdown(pickerId, anchorId) {
             var header = document.createElement('div');
             header.className = 'picker-section-header';
             header.textContent = opt.group;
-            dropdown.appendChild(header);
+            list.appendChild(header);
         }
 
         var item = document.createElement('div');
@@ -1439,8 +1442,10 @@ function showPickerDropdown(pickerId, anchorId) {
             });
         })(opt.value, pickerId);
 
-        dropdown.appendChild(item);
+        list.appendChild(item);
     }
+
+    dropdown.appendChild(list);
 
     // Position inside .input-wrapper (same parent as slash dropdown)
     var wrapper = document.querySelector('.input-wrapper');

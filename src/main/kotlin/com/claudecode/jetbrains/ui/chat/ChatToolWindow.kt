@@ -660,8 +660,6 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         "Auto-accept file edits"
                     PermissionMode.PLAN ->
                         "Planning only, no execution"
-                    PermissionMode.DONT_ASK ->
-                        "Don't ask for permission"
                     PermissionMode.BYPASS ->
                         "Skip all permission prompts"
                 },

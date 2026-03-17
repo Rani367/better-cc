@@ -11,7 +11,6 @@ enum class PermissionMode(val cliValue: String, val displayName: String) {
     DEFAULT("default", "Default"),
     PLAN("plan", "Plan"),
     ACCEPT_EDITS("acceptEdits", "Auto-accept Edits"),
-    DONT_ASK("dontAsk", "Don't Ask"),
     BYPASS("bypassPermissions", "Bypass Permissions");
 
     companion object {
