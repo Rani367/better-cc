@@ -38,13 +38,15 @@ data class McpServerInfo(
     val command: String?,
     val url: String?,
     val args: List<String>,
-    val status: McpServerStatus
+    val status: McpServerStatus,
+    val enabled: Boolean = true
 )
 
 enum class McpServerStatus(val displayName: String) {
     CONNECTED("Connected"),
     DISCONNECTED("Disconnected"),
     ERROR("Error"),
+    AUTHENTICATING("Authenticating"),
     UNKNOWN("Unknown")
 }
 
@@ -232,10 +234,10 @@ class McpManagerDialog(
                 BorderFactory.createLineBorder(JBColor.border(), 1),
                 JBUI.Borders.empty(8, 12, 8, 12)
             )
-            maximumSize = Dimension(Int.MAX_VALUE, 60)
+            maximumSize = Dimension(Int.MAX_VALUE, 70)
         }
 
-        // Left: status indicator + name + type
+        // Left: status indicator + name + type + enabled badge
         val infoPanel = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0))
 
         val statusDot = JBLabel(getStatusSymbol(server.status)).apply {
@@ -247,6 +249,9 @@ class McpManagerDialog(
 
         val nameLabel = JBLabel(server.name).apply {
             font = font.deriveFont(Font.BOLD)
+            if (!server.enabled) {
+                foreground = JBColor.GRAY
+            }
         }
         infoPanel.add(nameLabel)
 
@@ -255,10 +260,21 @@ class McpManagerDialog(
         }
         infoPanel.add(typeLabel)
 
+        if (!server.enabled) {
+            val disabledBadge = JBLabel("Disabled").apply {
+                foreground = JBColor(
+                    java.awt.Color(180, 120, 0),
+                    java.awt.Color(200, 160, 60)
+                )
+                font = font.deriveFont(Font.ITALIC, font.size2D - 1f)
+            }
+            infoPanel.add(disabledBadge)
+        }
+
         // Show command or URL
         val detailText = server.command ?: server.url ?: ""
         if (detailText.isNotEmpty()) {
-            val detailLabel = JBLabel(truncate(detailText, 40)).apply {
+            val detailLabel = JBLabel(truncate(detailText, 35)).apply {
                 foreground = JBColor.GRAY
                 toolTipText = detailText
             }
@@ -269,6 +285,23 @@ class McpManagerDialog(
 
         // Right: action buttons
         val actionsPanel = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0))
+
+        // Enable/Disable toggle
+        val toggleLabel = if (server.enabled) "Disable" else "Enable"
+        val toggleButton = JButton(toggleLabel).apply {
+            addActionListener {
+                toggleServerEnabled(server.name, !server.enabled)
+            }
+        }
+        actionsPanel.add(toggleButton)
+
+        // Authenticate button
+        val authButton = JButton("Authenticate").apply {
+            addActionListener {
+                authenticateServer(server.name)
+            }
+        }
+        actionsPanel.add(authButton)
 
         val reconnectButton = JButton("Reconnect").apply {
             addActionListener { reconnectServer(server.name) }
@@ -287,10 +320,11 @@ class McpManagerDialog(
 
     private fun getStatusSymbol(status: McpServerStatus): String {
         return when (status) {
-            McpServerStatus.CONNECTED -> "\u25CF"    // filled circle
-            McpServerStatus.DISCONNECTED -> "\u25CB"  // empty circle
-            McpServerStatus.ERROR -> "\u25CF"         // filled circle (red)
-            McpServerStatus.UNKNOWN -> "\u25CB"       // empty circle
+            McpServerStatus.CONNECTED -> "\u25CF"      // filled circle
+            McpServerStatus.DISCONNECTED -> "\u25CB"    // empty circle
+            McpServerStatus.ERROR -> "\u25CF"           // filled circle (red)
+            McpServerStatus.AUTHENTICATING -> "\u25D4"  // circle with upper-right
+            McpServerStatus.UNKNOWN -> "\u25CB"         // empty circle
         }
     }
 
@@ -304,6 +338,10 @@ class McpManagerDialog(
             McpServerStatus.ERROR -> JBColor(
                 java.awt.Color(200, 0, 0),
                 java.awt.Color(255, 80, 80)
+            )
+            McpServerStatus.AUTHENTICATING -> JBColor(
+                java.awt.Color(200, 150, 0),
+                java.awt.Color(230, 200, 60)
             )
             McpServerStatus.UNKNOWN -> JBColor.GRAY
         }
@@ -410,9 +448,63 @@ class McpManagerDialog(
     }
 
     private fun reconnectServer(name: String) {
-        // Reconnect is done by sending the command to the CLI via the chat
-        // For now, we indicate it's been requested
-        setStatus("Reconnect requested for '$name'. Use /mcp in chat to reconnect.")
+        setStatus("Reconnecting server '$name'...")
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val cliManager = ClaudeCliManager.getInstance(project)
+            val result = cliManager.runCliCommandWithExitCode(
+                listOf("mcp", "reconnect", name)
+            )
+            SwingUtilities.invokeLater {
+                if (result != null && result.first == 0) {
+                    setStatus("Server '$name' reconnect initiated.")
+                    loadServers()
+                } else {
+                    val errorMsg = result?.second?.trim() ?: "Unknown error"
+                    setStatus("Failed to reconnect '$name': $errorMsg")
+                }
+            }
+        }
+    }
+
+    private fun authenticateServer(name: String) {
+        setStatus("Authenticating server '$name'...")
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val cliManager = ClaudeCliManager.getInstance(project)
+            val result = cliManager.runCliCommandWithExitCode(
+                listOf("mcp", "authenticate", name)
+            )
+            SwingUtilities.invokeLater {
+                if (result != null && result.first == 0) {
+                    setStatus("Authentication for '$name' initiated.")
+                    loadServers()
+                } else {
+                    val errorMsg = result?.second?.trim() ?: "Unknown error"
+                    setStatus("Failed to authenticate '$name': $errorMsg")
+                }
+            }
+        }
+    }
+
+    private fun toggleServerEnabled(name: String, enable: Boolean) {
+        val action = if (enable) "Enabling" else "Disabling"
+        setStatus("$action server '$name'...")
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val cliManager = ClaudeCliManager.getInstance(project)
+            val command = if (enable) "enable" else "disable"
+            val result = cliManager.runCliCommandWithExitCode(
+                listOf("mcp", command, name)
+            )
+            SwingUtilities.invokeLater {
+                if (result != null && result.first == 0) {
+                    val past = if (enable) "enabled" else "disabled"
+                    setStatus("Server '$name' $past.")
+                    loadServers()
+                } else {
+                    val errorMsg = result?.second?.trim() ?: "Unknown error"
+                    setStatus("Failed to $command '$name': $errorMsg")
+                }
+            }
+        }
     }
 
     private fun setStatus(text: String) {
@@ -445,8 +537,9 @@ class McpManagerDialog(
                         }
                     }
 
-                    // Status is typically not in the list output;
-                    // default to UNKNOWN
+                    val statusStr = obj.get("status")?.asString
+                    val status = parseStatus(statusStr)
+                    val enabled = obj.get("enabled")?.asBoolean ?: true
                     result.add(
                         McpServerInfo(
                             name = name,
@@ -454,7 +547,8 @@ class McpManagerDialog(
                             command = command,
                             url = url,
                             args = args,
-                            status = McpServerStatus.UNKNOWN
+                            status = status,
+                            enabled = enabled
                         )
                     )
                 }
@@ -475,12 +569,8 @@ class McpManagerDialog(
                         }
                     }
                     val statusStr = obj.get("status")?.asString
-                    val status = when (statusStr) {
-                        "connected" -> McpServerStatus.CONNECTED
-                        "disconnected" -> McpServerStatus.DISCONNECTED
-                        "error" -> McpServerStatus.ERROR
-                        else -> McpServerStatus.UNKNOWN
-                    }
+                    val status = parseStatus(statusStr)
+                    val enabled = obj.get("enabled")?.asBoolean ?: true
                     result.add(
                         McpServerInfo(
                             name = name,
@@ -488,7 +578,8 @@ class McpManagerDialog(
                             command = command,
                             url = url,
                             args = args,
-                            status = status
+                            status = status,
+                            enabled = enabled
                         )
                     )
                 }
@@ -499,6 +590,16 @@ class McpManagerDialog(
             parseLineBased(output, result)
         }
         return result
+    }
+
+    private fun parseStatus(statusStr: String?): McpServerStatus {
+        return when (statusStr) {
+            "connected" -> McpServerStatus.CONNECTED
+            "disconnected" -> McpServerStatus.DISCONNECTED
+            "error" -> McpServerStatus.ERROR
+            "authenticating" -> McpServerStatus.AUTHENTICATING
+            else -> McpServerStatus.UNKNOWN
+        }
     }
 
     private fun parseLineBased(output: String, result: MutableList<McpServerInfo>) {

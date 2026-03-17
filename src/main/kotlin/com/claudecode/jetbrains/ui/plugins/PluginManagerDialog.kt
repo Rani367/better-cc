@@ -348,10 +348,19 @@ class PluginManagerDialog(
                 foreground = JBColor.GRAY
             })
         }
+
+        // Scope badge (User/Project/Local)
+        val scope = inferScope(plugin.source)
+        if (scope != null) {
+            infoPanel.add(createScopeBadge(scope))
+        }
+
         if (plugin.description.isNotEmpty()) {
-            infoPanel.add(JBLabel("- ${truncate(plugin.description, 50)}").apply {
-                foreground = JBColor.GRAY
-            })
+            infoPanel.add(
+                JBLabel("- ${truncate(plugin.description, 45)}").apply {
+                    foreground = JBColor.GRAY
+                }
+            )
         }
 
         card.add(infoPanel, BorderLayout.CENTER)
@@ -368,6 +377,45 @@ class PluginManagerDialog(
         card.add(actionsPanel, BorderLayout.EAST)
 
         return card
+    }
+
+    private fun inferScope(source: String?): InstallScope? {
+        if (source == null) return null
+        return when {
+            source.contains("project", ignoreCase = true) ->
+                InstallScope.PROJECT
+            source.contains("local", ignoreCase = true) ->
+                InstallScope.LOCAL
+            source.contains("user", ignoreCase = true) ->
+                InstallScope.USER
+            else -> null
+        }
+    }
+
+    private fun createScopeBadge(scope: InstallScope): JBLabel {
+        val colors = when (scope) {
+            InstallScope.USER -> JBColor(
+                java.awt.Color(0x4C, 0xAF, 0x50),
+                java.awt.Color(0x66, 0xBB, 0x6A)
+            )
+            InstallScope.PROJECT -> JBColor(
+                java.awt.Color(0x21, 0x96, 0xF3),
+                java.awt.Color(0x42, 0xA5, 0xF5)
+            )
+            InstallScope.LOCAL -> JBColor(
+                java.awt.Color(0xFF, 0x98, 0x00),
+                java.awt.Color(0xFF, 0xB7, 0x4D)
+            )
+        }
+        return JBLabel(scope.displayName.substringAfter("Install "))
+            .apply {
+                foreground = colors
+                font = font.deriveFont(Font.BOLD, font.size2D - 1f)
+                border = BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(colors, 1),
+                    JBUI.Borders.empty(0, 4, 0, 4)
+                )
+            }
     }
 
     private fun createAvailablePluginCard(plugin: PluginInfo): JPanel {
