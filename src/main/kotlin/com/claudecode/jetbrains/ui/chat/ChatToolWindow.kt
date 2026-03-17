@@ -38,6 +38,7 @@ import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
 
 import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
 import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
+import com.claudecode.jetbrains.ui.sessions.SessionTabManager
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -141,13 +142,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
         }
 
         // Wire fork handler (from hover actions)
-        messageList.setForkHandler { _ ->
-            val lastUserMsg = conversationMessages
-                .lastOrNull { it.sender == MessageSender.USER }
-            startNewConversation()
-            if (lastUserMsg != null) {
-                sendMessage(lastUserMsg.text)
-            }
+        messageList.setForkHandler { messageId ->
+            forkConversationAt(messageId)
         }
 
         // Wire send message handler (from JCEF input)
@@ -364,6 +360,95 @@ class ChatToolWindow(private val project: Project) : Disposable {
             messageList.setInputEnabled(true)
             messageList.focusInput()
         }
+    }
+
+    /**
+     * Forks the conversation at the given message ID.
+     * Finds the user message corresponding to the forked message,
+     * copies conversation history up to that point, and opens
+     * the fork in a new editor tab.
+     */
+    private fun forkConversationAt(messageId: String) {
+        // Find the message being forked from
+        val forkIdx = conversationMessages.indexOfFirst {
+            it.id == messageId
+        }
+
+        // Collect history up to and including the fork point
+        val historyUpToFork = if (forkIdx >= 0) {
+            conversationMessages.subList(0, forkIdx + 1).toList()
+        } else {
+            conversationMessages.toList()
+        }
+
+        // Find the last user message at or before the fork point
+        val userMsg = historyUpToFork.lastOrNull {
+            it.sender == MessageSender.USER
+        }
+
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed) return@invokeLater
+
+            // Open a new tab
+            val tabManager = SessionTabManager.getInstance(project)
+            val file = tabManager.openNewTab()
+            tabManager.updateTabTitle(
+                file.tabId, "Fork: ${userMsg?.text?.take(30) ?: "conversation"}"
+            )
+
+            // After tab opens, load the forked history
+            // We need a small delay for the editor to initialize
+            ApplicationManager.getApplication().invokeLater {
+                if (project.isDisposed) return@invokeLater
+                val editors =
+                    com.intellij.openapi.fileEditor.FileEditorManager
+                        .getInstance(project).getEditors(file)
+                val claudeEditor = editors.firstOrNull {
+                    it is com.claudecode.jetbrains.ui.sessions.ClaudeFileEditor
+                } as? com.claudecode.jetbrains.ui.sessions.ClaudeFileEditor
+                val forkedChat = claudeEditor?.chatPanel
+                if (forkedChat != null) {
+                    forkedChat.loadForkedHistory(historyUpToFork)
+                    // Re-send the last user message to start the fork
+                    if (userMsg != null) {
+                        forkedChat.sendPrefilledMessage(userMsg.text)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Loads forked conversation history into this chat panel.
+     * Used when a conversation is forked from another panel.
+     */
+    fun loadForkedHistory(history: List<ChatMessage>) {
+        messageList.clearMessages()
+        conversationMessages.clear()
+        messageIndexCounter = 0
+
+        for (msg in history) {
+            if (msg.sender == MessageSender.USER ||
+                msg.sender == MessageSender.ASSISTANT
+            ) {
+                val indexed = ChatMessage(
+                    sender = msg.sender,
+                    text = msg.text,
+                    id = msg.id,
+                    messageIndex = messageIndexCounter++
+                )
+                conversationMessages.add(indexed)
+                messageList.addMessage(indexed)
+            }
+        }
+
+        messageList.addMessage(
+            ChatMessage(
+                MessageSender.SYSTEM,
+                "Forked from previous conversation"
+            )
+        )
+        messageList.setSessionTitle("Forked Conversation")
     }
 
     /**
