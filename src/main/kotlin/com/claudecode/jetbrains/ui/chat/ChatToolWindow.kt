@@ -38,6 +38,7 @@ import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
 
 import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
 import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
+import com.claudecode.jetbrains.ui.sessions.SessionState
 import com.claudecode.jetbrains.ui.sessions.SessionTabManager
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
@@ -109,6 +110,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private var messageIndexCounter = 0
     private val conversationMessages =
         mutableListOf<ChatMessage>()
+
+    // Teleport location: "sidebar" or "tab"
+    private var location: String = "sidebar"
 
     init {
         project.putUserData(KEY, this)
@@ -199,6 +203,15 @@ class ChatToolWindow(private val project: Project) : Disposable {
         messageList.setThinkingClickHandler {
             ApplicationManager.getApplication().invokeLater {
                 showThinkingPicker()
+            }
+        }
+
+        // Wire teleport handler
+        messageList.setTeleportHandler { target ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) {
+                    handleTeleport(target)
+                }
             }
         }
 
@@ -449,6 +462,82 @@ class ChatToolWindow(private val project: Project) : Disposable {
             )
         )
         messageList.setSessionTitle("Forked Conversation")
+    }
+
+    /**
+     * Sets the location of this chat panel (sidebar or tab).
+     * This controls the teleport button label.
+     */
+    fun setLocation(loc: String) {
+        location = loc
+        val target = if (loc == "sidebar") "tab" else "sidebar"
+        messageList.setTeleportLabel(target)
+    }
+
+    /**
+     * Exports the current session state for teleporting.
+     */
+    fun exportSessionState(): SessionState {
+        return SessionState(
+            sessionId = currentSessionId,
+            sessionTitle = "Claude Code",
+            conversationHistory = conversationMessages.toList(),
+            messageIndexCounter = messageIndexCounter
+        )
+    }
+
+    /**
+     * Loads a teleported session state.
+     */
+    fun loadTeleportedState(state: SessionState) {
+        destroyProcess()
+        currentSessionId = state.sessionId
+        isResumedSession = state.sessionId != null
+        messageIndexCounter = state.messageIndexCounter
+        conversationMessages.clear()
+
+        messageList.clearMessages()
+        for (msg in state.conversationHistory) {
+            conversationMessages.add(msg)
+            messageList.addMessage(msg)
+        }
+
+        messageList.setSessionTitle(state.sessionTitle)
+        messageList.setInputEnabled(true)
+        messageList.focusInput()
+    }
+
+    /**
+     * Handles a teleport request from the JS bridge.
+     */
+    private fun handleTeleport(target: String) {
+        val state = exportSessionState()
+
+        when (target) {
+            "tab" -> {
+                // Move from sidebar to editor tab
+                val tabManager = SessionTabManager.getInstance(project)
+                tabManager.teleportToTab(state)
+                // Clear the sidebar
+                startNewConversation()
+            }
+            "sidebar" -> {
+                // Move from tab to sidebar
+                val sidebarChat =
+                    project.getUserData(KEY)
+                if (sidebarChat != null && sidebarChat !== this) {
+                    sidebarChat.loadTeleportedState(state)
+                    // Activate sidebar tool window
+                    val toolWindow =
+                        com.intellij.openapi.wm.ToolWindowManager
+                            .getInstance(project)
+                            .getToolWindow("Claude Code")
+                    toolWindow?.activate(null)
+                }
+                // Close the tab if we're in one
+                destroyProcess()
+            }
+        }
     }
 
     /**

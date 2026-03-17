@@ -11,6 +11,7 @@ class ChatToolWindowFactory : ToolWindowFactory, DumbAware {
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val chatToolWindow = ChatToolWindow(project)
+        chatToolWindow.setLocation("sidebar")
         Disposer.register(toolWindow.disposable, chatToolWindow)
 
         val content = ContentFactory.getInstance()

@@ -1640,6 +1640,9 @@ function _initPage() {
     var settingsBtn = document.getElementById('settings-btn');
     if (settingsBtn) settingsBtn.addEventListener('click', handleSettings);
 
+    var teleportBtn = document.getElementById('teleport-btn');
+    if (teleportBtn) teleportBtn.addEventListener('click', handleTeleport);
+
     // Input area
     var messageInput = document.getElementById('message-input');
     if (messageInput) {
@@ -1664,4 +1667,39 @@ function _initPage() {
     // File attachments
     _setupDragAndDrop();
     _setupClipboardPaste();
+}
+
+// ── Session Teleport ──────────────────────────────────────────────
+
+// Current teleport target label (set from Kotlin)
+var _teleportTarget = 'tab'; // 'tab' or 'sidebar'
+
+/**
+ * Shows or hides the teleport button and sets its label/tooltip.
+ * Called from Kotlin: setTeleportLabel("tab") or setTeleportLabel("sidebar")
+ * Pass null or empty to hide the button.
+ */
+function setTeleportLabel(target) {
+    var btn = document.getElementById('teleport-btn');
+    if (!btn) return;
+    if (!target) {
+        btn.style.display = 'none';
+        return;
+    }
+    _teleportTarget = target;
+    btn.style.display = '';
+    if (target === 'tab') {
+        btn.title = 'Move to Editor Tab';
+    } else {
+        btn.title = 'Move to Sidebar';
+    }
+}
+
+function handleTeleport() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({
+            action: 'teleportSession',
+            target: _teleportTarget
+        }));
+    }
 }

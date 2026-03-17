@@ -139,6 +139,42 @@ class SessionTabManager(
      */
     fun getOpenTabs(): List<ClaudeVirtualFile> = openTabs.values.toList()
 
+    /**
+     * Teleports a session from the sidebar to a new editor tab.
+     * Returns the [ClaudeVirtualFile] for the new tab, or null on failure.
+     */
+    fun teleportToTab(
+        state: SessionState
+    ): ClaudeVirtualFile? {
+        val file = openNewTab()
+        updateTabTitle(file.tabId, state.sessionTitle)
+
+        // Load state into the new tab's ChatToolWindow after it opens
+        ApplicationManager.getApplication().invokeLater {
+            if (project.isDisposed) return@invokeLater
+            val fem = FileEditorManager.getInstance(project)
+            val editors = fem.getEditors(file)
+            val claudeEditor = editors.firstOrNull {
+                it is ClaudeFileEditor
+            } as? ClaudeFileEditor
+            claudeEditor?.chatPanel?.loadTeleportedState(state)
+        }
+        logger.info("Teleported session to tab: ${state.sessionTitle}")
+        return file
+    }
+
+    /**
+     * Closes a tab by its [ClaudeVirtualFile] reference.
+     * Used during teleport-to-sidebar.
+     */
+    fun closeTab(file: ClaudeVirtualFile) {
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) {
+                FileEditorManager.getInstance(project).closeFile(file)
+            }
+        }
+    }
+
     // ── Internals ───────────────────────────────────────────────
 
     private fun clearStatusOnFocus(file: ClaudeVirtualFile) {

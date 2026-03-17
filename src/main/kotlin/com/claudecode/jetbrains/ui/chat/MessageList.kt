@@ -247,6 +247,10 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         codeBlockRenderer?.thinkingClickHandler = handler
     }
 
+    fun setTeleportHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.teleportHandler = handler
+    }
+
     // ── Header/input state updates (JS bridge) ─────────────────────
 
     fun setSessionTitle(title: String) {
@@ -302,6 +306,14 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
             executeJS("setBranchPill(${jsStringEscape(branchName)})")
         } else {
             executeJS("setBranchPill(null)")
+        }
+    }
+
+    fun setTeleportLabel(target: String?) {
+        if (target != null) {
+            executeJS("setTeleportLabel(${jsStringEscape(target)})")
+        } else {
+            executeJS("setTeleportLabel(null)")
         }
     }
 
@@ -492,6 +504,12 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                         </button>
                         <div class="header-spacer"></div>
                         <span id="branch-pill" class="branch-pill" style="display:none"></span>
+                        <button class="header-btn" id="teleport-btn" title="Move to Tab" style="display:none">
+                            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="1" y="1" width="14" height="14" rx="2"/>
+                                <path d="M6 4l4 4-4 4"/>
+                            </svg>
+                        </button>
                         <button class="header-btn" id="new-conversation-btn" title="New Conversation">
                             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M8 3v10M3 8h10"/>

@@ -58,6 +58,7 @@ class ClaudeFileEditor(
 
     val chatPanel: ChatToolWindow = ChatToolWindow(project).also { panel ->
         Disposer.register(this, panel)
+        panel.setLocation("tab")
 
         // Wire status callback so tab indicators update
         panel.setStatusChangeListener { status ->

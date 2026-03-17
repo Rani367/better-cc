@@ -48,6 +48,7 @@ class CodeBlockRenderer(
     var thinkingClickHandler: (() -> Unit)? = null
     var attachFileHandler: ((String, String) -> Unit)? = null
     var checkoutBranchHandler: ((String) -> Unit)? = null
+    var teleportHandler: ((String) -> Unit)? = null
 
     /**
      * JavaScript code that defines window.sendToKotlin function.
@@ -250,6 +251,11 @@ class CodeBlockRenderer(
                     val eventData =
                         json.get("data")?.toString() ?: ""
                     logTelemetryEvent(eventName, eventData)
+                }
+                "teleportSession" -> {
+                    val target =
+                        json.get("target")?.asString ?: return
+                    teleportHandler?.invoke(target)
                 }
             }
         } catch (e: Exception) {
