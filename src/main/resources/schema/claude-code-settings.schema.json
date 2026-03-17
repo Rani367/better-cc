@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Claude Code Settings",
+  "description": "Configuration schema for Claude Code settings files (.claude/settings.json, .claude/settings.local.json)",
+  "type": "object",
+  "properties": {
+    "permissions": {
+      "type": "object",
+      "description": "Tool permission configuration",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of tool patterns to allow without prompting"
+        },
+        "deny": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of tool patterns to deny"
+        }
+      },
+      "additionalProperties": false
+    },
+    "env": {
+      "type": "object",
+      "description": "Environment variables to set for the CLI process",
+      "additionalProperties": { "type": "string" }
+    },
+    "model": {
+      "type": "string",
+      "description": "Default model identifier (e.g. claude-sonnet-4-6)"
+    },
+    "customApiKey": {
+      "type": "string",
+      "description": "Custom API key for Anthropic API"
+    },
+    "apiBaseUrl": {
+      "type": "string",
+      "description": "Custom API base URL"
+    },
+    "mcpServers": {
+      "type": "object",
+      "description": "MCP server configurations",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["stdio", "http", "sse"],
+            "description": "Transport type"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to run (stdio type)"
+          },
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Command arguments (stdio type)"
+          },
+          "url": {
+            "type": "string",
+            "description": "Server URL (http/sse type)"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Environment variables for the server"
+          }
+        }
+      }
+    },
+    "preferredNotifChannel": {
+      "type": "string",
+      "enum": ["terminal", "notification_center", "none"],
+      "description": "Preferred notification channel"
+    },
+    "theme": {
+      "type": "string",
+      "enum": ["dark", "light", "system"],
+      "description": "UI theme preference"
+    }
+  },
+  "additionalProperties": true
+}

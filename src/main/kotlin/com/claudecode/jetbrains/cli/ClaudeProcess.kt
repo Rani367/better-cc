@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.cli
 
+import com.claudecode.jetbrains.settings.ClaudeSettings
 import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
@@ -245,8 +246,45 @@ class ClaudeProcess private constructor(
                 processBuilder.environment().putAll(environmentVariables)
             }
 
+            // Prepend Python venv bin to PATH if configured
+            if (ClaudeSettings.getInstance().usePythonEnvironment) {
+                prependPythonVenvPath(
+                    processBuilder, workingDir
+                )
+            }
+
             val process = processBuilder.start()
             return ClaudeProcess(sessionId, process)
+        }
+
+        /**
+         * If a Python virtual environment exists in the project
+         * directory, prepend its bin/ to PATH so the CLI can use
+         * project-specific Python tools.
+         */
+        private fun prependPythonVenvPath(
+            processBuilder: ProcessBuilder,
+            workingDir: String
+        ) {
+            val candidates = listOf(
+                ".venv/bin", "venv/bin"
+            )
+            for (candidate in candidates) {
+                val venvBin = java.io.File(workingDir, candidate)
+                if (venvBin.isDirectory) {
+                    val env = processBuilder.environment()
+                    val currentPath = env["PATH"] ?: ""
+                    env["PATH"] =
+                        venvBin.absolutePath +
+                            java.io.File.pathSeparator +
+                            currentPath
+                    logger.info(
+                        "Prepended Python venv to PATH: " +
+                            venvBin.absolutePath
+                    )
+                    break
+                }
+            }
         }
 
         /**
