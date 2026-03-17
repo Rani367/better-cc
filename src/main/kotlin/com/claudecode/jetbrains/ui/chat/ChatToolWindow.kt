@@ -413,19 +413,32 @@ class ChatToolWindow(private val project: Project) : Disposable {
     }
 
     private fun showModelPicker() {
-        val options = listOf("Default", "sonnet", "opus", "haiku")
-        val popup = JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(options)
-            .setTitle("Select Model")
-            .setItemChosenCallback { selected ->
-                val modelValue =
-                    if (selected == "Default") "" else selected
-                ClaudeSettings.getInstance().selectedModel = modelValue
-                stateService.setActiveModel(modelValue)
-                messageList.setModelLabel(modelDisplayText(modelValue))
+        // Fetch models in background, show picker when ready
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val cliManager = ClaudeCliManager.getInstance(project)
+            val cliModels = cliManager.fetchModels()
+            val options = mutableListOf("Default")
+            options.addAll(cliModels)
+
+            ApplicationManager.getApplication().invokeLater {
+                if (project.isDisposed) return@invokeLater
+                val popup = JBPopupFactory.getInstance()
+                    .createPopupChooserBuilder(options)
+                    .setTitle("Select Model")
+                    .setItemChosenCallback { selected ->
+                        val modelValue =
+                            if (selected == "Default") "" else selected
+                        ClaudeSettings.getInstance().selectedModel =
+                            modelValue
+                        stateService.setActiveModel(modelValue)
+                        messageList.setModelLabel(
+                            modelDisplayText(modelValue)
+                        )
+                    }
+                    .createPopup()
+                popup.showInCenterOf(rootPanel)
             }
-            .createPopup()
-        popup.showInCenterOf(rootPanel)
+        }
     }
 
     private fun showPermissionModePicker() {
@@ -466,6 +479,17 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 }
                 ClaudeSettings.getInstance().permissionMode = selected
                 messageList.setPermissionModeLabel(selected.displayName)
+                // Update spinner color per permission mode
+                val spinnerColor = when (selected) {
+                    PermissionMode.DEFAULT -> "#da7756"
+                    PermissionMode.ACCEPT_EDITS -> "var(--app-fg)"
+                    PermissionMode.PLAN ->
+                        "var(--app-button-background)"
+                    PermissionMode.BYPASS ->
+                        "var(--app-error-foreground)"
+                    else -> "var(--app-secondary-foreground)"
+                }
+                messageList.setSpinnerColor(spinnerColor)
             }
             .createPopup()
         popup.showInCenterOf(rootPanel)

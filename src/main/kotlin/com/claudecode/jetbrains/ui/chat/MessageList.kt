@@ -270,6 +270,10 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         executeJS("setThinkingLabel(${jsStringEscape(text)})")
     }
 
+    fun setSpinnerColor(cssColor: String) {
+        executeJS("setSpinnerColor(${jsStringEscape(cssColor)})")
+    }
+
     // ── Thinking block bridge methods ────────────────────────────
 
     fun addThinkingBlock(id: String) {

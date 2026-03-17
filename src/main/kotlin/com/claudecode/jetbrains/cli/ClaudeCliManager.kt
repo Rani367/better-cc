@@ -250,6 +250,39 @@ class ClaudeCliManager(private val project: Project) {
         }
     }
 
+    /**
+     * Fetches available models from the Claude CLI.
+     * Returns a list of model identifier strings, or a default
+     * fallback list if the CLI command fails.
+     * Must be called off-EDT.
+     */
+    fun fetchModels(): List<String> {
+        val output = runCliCommand(listOf("models"), timeout = 10000)
+        if (output != null) {
+            val models = output.lines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+            if (models.isNotEmpty()) return models
+        }
+        // Fallback: try config-based approach
+        val configOutput = runCliCommand(
+            listOf("config", "list-models"),
+            timeout = 10000
+        )
+        if (configOutput != null) {
+            val models = configOutput.lines()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && !it.startsWith("#") }
+            if (models.isNotEmpty()) return models
+        }
+        // Default fallback
+        return listOf(
+            "claude-sonnet-4-6",
+            "claude-opus-4-6",
+            "claude-haiku-4-5"
+        )
+    }
+
     companion object {
         fun getInstance(project: Project): ClaudeCliManager =
             project.getService(ClaudeCliManager::class.java)

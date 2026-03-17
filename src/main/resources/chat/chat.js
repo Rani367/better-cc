@@ -1171,6 +1171,12 @@ function setThinkingLabel(text) {
     if (el) el.textContent = text;
 }
 
+function setSpinnerColor(cssColor) {
+    document.documentElement.style.setProperty(
+        '--app-spinner-foreground', cssColor
+    );
+}
+
 function handleModelClick() {
     if (sendToKotlin) {
         sendToKotlin(JSON.stringify({ action: 'modelClick' }));
