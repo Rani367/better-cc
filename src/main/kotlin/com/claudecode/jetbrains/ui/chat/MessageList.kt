@@ -504,6 +504,8 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                             </svg>
                         </button>
                     </header>
+                    <!-- Banners -->
+                    <div id="banner-container"></div>
                     <!-- Empty state -->
                     <div id="empty-state">
                         <div class="empty-state-content">

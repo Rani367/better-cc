@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.ui.chat
 
+import com.claudecode.jetbrains.settings.ClaudeSettings
 import com.google.gson.JsonParser
 import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.DiffManager
@@ -222,6 +223,17 @@ class CodeBlockRenderer(
                     val type = json.get("type")?.asString ?: "info"
                     showNotification(message, type)
                 }
+                "dismissBanner" -> {
+                    val bannerId =
+                        json.get("bannerId")?.asString ?: return
+                    persistBannerDismissal(bannerId)
+                }
+                "dismiss_terminal_banner" -> {
+                    persistBannerDismissal("terminal_banner")
+                }
+                "dismiss_review_upsell_banner" -> {
+                    persistBannerDismissal("review_upsell_banner")
+                }
             }
         } catch (e: Exception) {
             logger.warn("Failed to handle JS callback", e)
@@ -339,6 +351,10 @@ class CodeBlockRenderer(
                 logger.debug("Terminal plugin not available", e)
             }
         }
+    }
+
+    private fun persistBannerDismissal(bannerId: String) {
+        ClaudeSettings.getInstance().dismissedBanners.add(bannerId)
     }
 
     private fun showNotification(message: String, type: String) {

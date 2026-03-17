@@ -1566,6 +1566,64 @@ function setRewindBadge(messageId, fileCount) {
 
 // ── Page Initialization ─────────────────────────────────────────────
 
+// ── Banner system ──────────────────────────────────────────────
+
+/**
+ * Shows a dismissible banner above the messages area.
+ * @param {string} id - Unique banner identifier (used for persistence)
+ * @param {string} content - HTML or text content to display
+ * @param {string} type - 'info' | 'warning' | 'error' | 'success'
+ */
+function showBanner(id, content, type) {
+    type = type || 'info';
+    var container = document.getElementById('banner-container');
+    if (!container) return;
+
+    // Don't add duplicates
+    if (document.getElementById('banner-' + id)) return;
+
+    var banner = document.createElement('div');
+    banner.id = 'banner-' + id;
+    banner.className = 'banner banner-' + type;
+
+    var contentEl = document.createElement('div');
+    contentEl.className = 'banner-content';
+    contentEl.innerHTML = content;
+
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'banner-close';
+    closeBtn.innerHTML = '&#215;';
+    closeBtn.setAttribute('aria-label', 'Dismiss');
+    closeBtn.addEventListener('click', function() {
+        dismissBanner(id);
+    });
+
+    banner.appendChild(contentEl);
+    banner.appendChild(closeBtn);
+    container.appendChild(banner);
+}
+
+/**
+ * Dismisses a banner by id and notifies Kotlin for persistence.
+ * @param {string} id - The banner identifier to dismiss
+ */
+function dismissBanner(id) {
+    var el = document.getElementById('banner-' + id);
+    if (el) {
+        el.style.animation = 'none';
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.15s ease-out';
+        setTimeout(function() { el.remove(); }, 160);
+    }
+    // Notify Kotlin to persist the dismissal
+    if (typeof sendToKotlin === 'function') {
+        sendToKotlin(JSON.stringify({
+            action: 'dismissBanner',
+            bannerId: id
+        }));
+    }
+}
+
 /**
  * Set up all event listeners for header, input, and footer buttons.
  * Called once from the HTML after all scripts are loaded.

@@ -1834,6 +1834,85 @@ html, body {
     white-space: nowrap;
 }
 
+/* ── Banners ─────────────────────────────────────────────────── */
+
+#banner-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px 12px 2px 12px;
+    flex-shrink: 0;
+}
+
+#banner-container:empty {
+    display: none;
+}
+
+.banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--corner-radius-medium);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--app-primary-foreground);
+    position: relative;
+    animation: bannerSlideIn 0.2s ease-out;
+}
+
+@keyframes bannerSlideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.banner-info {
+    background: var(--app-tool-background);
+    border-left: 3px solid var(--app-claude-orange);
+}
+
+.banner-warning {
+    background: var(--app-tool-background);
+    border-left: 3px solid var(--app-warning-accent);
+}
+
+.banner-error {
+    background: var(--app-tool-background);
+    border-left: 3px solid var(--app-error-foreground);
+}
+
+.banner-success {
+    background: var(--app-tool-background);
+    border-left: 3px solid var(--app-success-foreground);
+}
+
+.banner-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.banner-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--app-secondary-foreground);
+    padding: 0;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-small);
+    font-size: 14px;
+    line-height: 1;
+}
+
+.banner-close:hover {
+    background: var(--app-ghost-button-hover-background);
+    color: var(--app-primary-foreground);
+}
+
 /* Hide tool body when viewport < 500px */
 @media (max-width: 500px) {
     .tool-body {
