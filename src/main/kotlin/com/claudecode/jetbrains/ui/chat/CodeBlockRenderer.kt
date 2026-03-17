@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.ui.chat
 
+import com.claudecode.jetbrains.cli.ClaudeCliManager
 import com.claudecode.jetbrains.settings.ClaudeSettings
 import com.google.gson.JsonParser
 import com.intellij.diff.DiffContentFactory
@@ -234,6 +235,22 @@ class CodeBlockRenderer(
                 "dismiss_review_upsell_banner" -> {
                     persistBannerDismissal("review_upsell_banner")
                 }
+                "showLogs" -> {
+                    openOutputPanel()
+                }
+                "login" -> {
+                    runAuthCommand("auth", "login")
+                }
+                "logout" -> {
+                    runAuthCommand("auth", "logout")
+                }
+                "logEvent" -> {
+                    val eventName =
+                        json.get("event")?.asString ?: return
+                    val eventData =
+                        json.get("data")?.toString() ?: ""
+                    logTelemetryEvent(eventName, eventData)
+                }
             }
         } catch (e: Exception) {
             logger.warn("Failed to handle JS callback", e)
@@ -355,6 +372,27 @@ class CodeBlockRenderer(
 
     private fun persistBannerDismissal(bannerId: String) {
         ClaudeSettings.getInstance().dismissedBanners.add(bannerId)
+    }
+
+    private fun runAuthCommand(vararg args: String) {
+        ApplicationManager.getApplication().executeOnPooledThread {
+            if (project.isDisposed) return@executeOnPooledThread
+            val cliManager = ClaudeCliManager.getInstance(project)
+            val result = cliManager.runCliCommand(args.toList())
+            val message = if (result != null) {
+                "Auth command succeeded: ${result.take(200)}"
+            } else {
+                "Auth command failed. Check logs for details."
+            }
+            val type = if (result != null) "info" else "error"
+            showNotification(message, type)
+        }
+    }
+
+    private fun logTelemetryEvent(eventName: String, eventData: String) {
+        if (ClaudeSettings.getInstance().telemetryEnabled) {
+            logger.info("Claude telemetry: $eventName $eventData")
+        }
     }
 
     private fun showNotification(message: String, type: String) {
