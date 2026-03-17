@@ -673,14 +673,14 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
             put("--app-primary-border-color", resolveColor("Borders.color", isDark, "#464648", "#e0e0e0"))
             put("--app-link-color", resolveColor("Link.activeForeground", isDark, "#6bb8ff", "#1a56b0"))
             put("--app-transparent-inner-border", if (isDark) "rgba(255,255,255,0.1)" else "rgba(0,0,0,0.07)")
-            put("--app-ghost-button-hover-background", resolveColor("ActionButton.hoverBackground", isDark, "#4c5052", "#dfdfdf"))
+            put("--app-ghost-button-hover-background", if (isDark) "rgba(90, 93, 94, 0.31)" else "rgba(0, 0, 0, 0.07)")
             put("--app-menu-background", resolveColor("PopupMenu.background", isDark, "#2b2d30", "#f5f5f5"))
             // VS Code parity vars
             put("--app-claude-clay-button-orange", if (isDark) "#d97757" else "#c6613f")
             put("--app-claude-ivory", "#faf9f5")
             put("--app-input-secondary-background", resolveColor("PopupMenu.background", isDark, "#2b2d30", "#f5f5f5"))
             put("--app-header-background", resolveColor("SidePanel.background", isDark, "#2b2d30", "#f5f5f5"))
-            put("--app-list-hover-background", resolveColor("ActionButton.hoverBackground", isDark, "#4c5052", "#dfdfdf"))
+            put("--app-list-hover-background", if (isDark) "rgba(90, 93, 94, 0.31)" else "rgba(0, 0, 0, 0.07)")
             put("--app-list-active-background", resolveColor("Button.default.startBackground", isDark, "#365880", "#528bff"))
             put("--app-progressbar-background", "#74c991")
             // Scrollbar
