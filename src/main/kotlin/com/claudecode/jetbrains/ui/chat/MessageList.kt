@@ -278,6 +278,14 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         executeJS("setSendHint($useCtrlEnter)")
     }
 
+    fun setBranchPill(branchName: String?) {
+        if (branchName != null) {
+            executeJS("setBranchPill(${jsStringEscape(branchName)})")
+        } else {
+            executeJS("setBranchPill(null)")
+        }
+    }
+
     // ── Thinking block bridge methods ────────────────────────────
 
     fun addThinkingBlock(id: String) {
@@ -464,6 +472,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                             </span>
                         </button>
                         <div class="header-spacer"></div>
+                        <span id="branch-pill" class="branch-pill" style="display:none"></span>
                         <button class="header-btn" id="new-conversation-btn" title="New Conversation">
                             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M8 3v10M3 8h10"/>

@@ -1305,6 +1305,18 @@ function handleThinkingClick() {
     }
 }
 
+function setBranchPill(branchName) {
+    var el = document.getElementById('branch-pill');
+    if (!el) return;
+    if (branchName) {
+        el.textContent = '\uD83C\uDF3F ' + branchName;
+        el.style.display = '';
+        el.title = 'Current branch: ' + branchName;
+    } else {
+        el.style.display = 'none';
+    }
+}
+
 function setSendHint(useCtrlEnter) {
     var el = document.getElementById('send-hint');
     if (!el) return;

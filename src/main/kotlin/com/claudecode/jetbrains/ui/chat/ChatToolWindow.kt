@@ -277,6 +277,21 @@ class ChatToolWindow(private val project: Project) : Disposable {
         messageList.setThinkingLabel(settings.thinkingMode.displayName)
         messageList.setPermissionModeLabel(settings.permissionMode.displayName)
         messageList.setSendHint(settings.useCtrlEnterToSend)
+
+        // Fetch git branch in background
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val tracker =
+                com.claudecode.jetbrains.context.GitBranchTracker
+                    .getInstance(project)
+            val branch = tracker.getCurrentBranch()
+            if (branch != null) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) {
+                        messageList.setBranchPill(branch)
+                    }
+                }
+            }
+        }
     }
 
     fun getContent(): JPanel = rootPanel

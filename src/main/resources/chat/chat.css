@@ -330,6 +330,20 @@ html, body {
     flex: 1;
 }
 
+.branch-pill {
+    font-size: 0.75em;
+    color: var(--app-secondary-foreground);
+    background: var(--app-tool-background);
+    border: 0.5px solid var(--app-input-border);
+    border-radius: 10px;
+    padding: 2px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+    flex-shrink: 0;
+}
+
 .send-hint {
     font-size: 0.75em;
     color: var(--app-secondary-foreground);

@@ -26,6 +26,7 @@
         <projectService serviceImplementation="com.claudecode.jetbrains.context.DiagnosticsProvider"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.FileContextProvider"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.ProjectContextProvider"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.context.GitBranchTracker"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.services.ClaudeStateService"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.ui.sessions.SessionTabManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.checkpoint.CheckpointManager"/>

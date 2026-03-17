@@ -45,6 +45,7 @@ class CodeBlockRenderer(
     var permissionModeClickHandler: (() -> Unit)? = null
     var thinkingClickHandler: (() -> Unit)? = null
     var attachFileHandler: ((String, String) -> Unit)? = null
+    var checkoutBranchHandler: ((String) -> Unit)? = null
 
     /**
      * JavaScript code that defines window.sendToKotlin function.
@@ -202,6 +203,11 @@ class CodeBlockRenderer(
                 }
                 "openClaudeInTerminal" -> {
                     openClaudeInTerminal()
+                }
+                "checkoutBranch" -> {
+                    val branch =
+                        json.get("branch")?.asString ?: return
+                    checkoutBranchHandler?.invoke(branch)
                 }
                 "attachFile" -> {
                     val name =
