@@ -696,7 +696,9 @@ function dismissErrorBanner() {
     if (existing) existing.remove();
 }
 
-// ── Drop Overlay ─────────────────────────────────────────────────
+// ── File Attachments & Drop Overlay ──────────────────────────────
+
+var _attachedFiles = [];
 
 function showDropOverlay(visible) {
     var existing = document.getElementById('drop-overlay');
@@ -705,12 +707,120 @@ function showDropOverlay(visible) {
             var overlay = document.createElement('div');
             overlay.id = 'drop-overlay';
             overlay.className = 'drop-overlay';
-            overlay.innerHTML = '<div class="drop-overlay-label">Drop files to add</div>';
+            overlay.innerHTML = '<div class="drop-overlay-label">' +
+                'Drop files to add</div>';
             document.body.appendChild(overlay);
         }
     } else {
         if (existing) existing.remove();
     }
+}
+
+function addAttachedFile(name, path) {
+    if (_attachedFiles.some(function(f) { return f.path === path; })) {
+        return;
+    }
+    _attachedFiles.push({ name: name, path: path });
+    _renderAttachmentChips();
+}
+
+function removeAttachedFile(path) {
+    _attachedFiles = _attachedFiles.filter(function(f) {
+        return f.path !== path;
+    });
+    _renderAttachmentChips();
+}
+
+function clearAttachedFiles() {
+    _attachedFiles = [];
+    _renderAttachmentChips();
+}
+
+function getAttachedFiles() {
+    return _attachedFiles.slice();
+}
+
+function _renderAttachmentChips() {
+    var container = document.getElementById('attachment-chips');
+    if (!container) return;
+    container.innerHTML = '';
+    if (_attachedFiles.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'flex';
+    for (var i = 0; i < _attachedFiles.length; i++) {
+        var file = _attachedFiles[i];
+        var chip = document.createElement('div');
+        chip.className = 'attachment-chip';
+        chip.innerHTML = '<span class="attachment-name">' +
+            escapeHtml(file.name) + '</span>' +
+            '<button class="attachment-remove" ' +
+            'onclick="removeAttachedFile(\'' +
+            escapeHtml(file.path).replace(/'/g, "\\'") +
+            '\')">\u00d7</button>';
+        container.appendChild(chip);
+    }
+}
+
+function _setupDragAndDrop() {
+    var dragCounter = 0;
+    document.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        dragCounter++;
+        if (dragCounter === 1) showDropOverlay(true);
+    });
+    document.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+            dragCounter = 0;
+            showDropOverlay(false);
+        }
+    });
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dragCounter = 0;
+        showDropOverlay(false);
+        var files = e.dataTransfer.files;
+        for (var i = 0; i < files.length; i++) {
+            var file = files[i];
+            if (sendToKotlin) {
+                sendToKotlin(JSON.stringify({
+                    action: 'attachFile',
+                    name: file.name,
+                    path: file.name,
+                    type: file.type
+                }));
+            }
+        }
+    });
+}
+
+function _setupClipboardPaste() {
+    var input = document.getElementById('message-input');
+    if (!input) return;
+    input.addEventListener('paste', function(e) {
+        var items = (e.clipboardData || {}).items || [];
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                e.preventDefault();
+                var file = items[i].getAsFile();
+                if (file && sendToKotlin) {
+                    sendToKotlin(JSON.stringify({
+                        action: 'attachFile',
+                        name: file.name || 'pasted-image.png',
+                        path: 'clipboard-image',
+                        type: file.type
+                    }));
+                }
+                return;
+            }
+        }
+    });
 }
 
 // ── Rewind / Checkpoint ──────────────────────────────────────────
@@ -1438,4 +1548,8 @@ function _initPage() {
     // Send button
     var sendBtn = document.getElementById('send-btn');
     if (sendBtn) sendBtn.addEventListener('click', handleSend);
+
+    // File attachments
+    _setupDragAndDrop();
+    _setupClipboardPaste();
 }

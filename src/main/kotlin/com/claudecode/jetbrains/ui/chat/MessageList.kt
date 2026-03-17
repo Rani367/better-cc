@@ -516,6 +516,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                                          data-placeholder="What can I help you with?"
                                          role="textbox"></div>
                                 </div>
+                                <div id="attachment-chips" class="attachment-chips" style="display:none"></div>
                                 <div id="usage-bar" class="usage-bar" style="display:none">
                                     <div class="usage-fill"></div>
                                 </div>

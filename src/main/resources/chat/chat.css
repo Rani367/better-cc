@@ -1313,6 +1313,48 @@ html, body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
+/* ── File Attachment Chips ────────────────────────────────────── */
+.attachment-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 0.5px solid var(--app-input-border);
+}
+
+.attachment-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--app-tool-background);
+    border: 0.5px solid var(--app-input-border);
+    border-radius: var(--corner-radius-small);
+    padding: 2px 6px;
+    font-size: 0.8em;
+    color: var(--app-primary-foreground);
+    max-width: 200px;
+}
+
+.attachment-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.attachment-remove {
+    background: none;
+    border: none;
+    color: var(--app-secondary-foreground);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.attachment-remove:hover {
+    color: var(--app-error-foreground);
+}
+
 /* ── Tables ─────────────────────────────────────────────────── */
 .message-content table {
     border-collapse: collapse;

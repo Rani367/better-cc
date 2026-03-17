@@ -44,6 +44,7 @@ class CodeBlockRenderer(
     var modelClickHandler: (() -> Unit)? = null
     var permissionModeClickHandler: (() -> Unit)? = null
     var thinkingClickHandler: (() -> Unit)? = null
+    var attachFileHandler: ((String, String) -> Unit)? = null
 
     /**
      * JavaScript code that defines window.sendToKotlin function.
@@ -201,6 +202,13 @@ class CodeBlockRenderer(
                 }
                 "openClaudeInTerminal" -> {
                     openClaudeInTerminal()
+                }
+                "attachFile" -> {
+                    val name =
+                        json.get("name")?.asString ?: return
+                    val path =
+                        json.get("path")?.asString ?: return
+                    attachFileHandler?.invoke(name, path)
                 }
                 "showNotification" -> {
                     val message =
