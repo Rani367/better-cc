@@ -1308,6 +1308,9 @@ function _slashDropdownSelect() {
 function updateUsageBar(percent, label) {
     var bar = document.getElementById('usage-bar');
     if (!bar) return;
+    if (percent > 0) {
+        bar.style.display = '';
+    }
     var fill = bar.querySelector('.usage-fill');
     if (!fill) return;
     fill.style.width = Math.min(percent, 100) + '%';

@@ -251,6 +251,13 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 ApplicationManager.getApplication().invokeLater {
                     if (!project.isDisposed) {
                         messageList.setCostLabel(usage.formatCost())
+                        val percent = usage.contextPercent
+                        if (percent > 0) {
+                            messageList.updateUsageBar(
+                                percent,
+                                "$percent% context used"
+                            )
+                        }
                     }
                 }
             }

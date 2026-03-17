@@ -516,6 +516,9 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                                          data-placeholder="What can I help you with?"
                                          role="textbox"></div>
                                 </div>
+                                <div id="usage-bar" class="usage-bar" style="display:none">
+                                    <div class="usage-fill"></div>
+                                </div>
                                 <div class="input-footer">
                                     <button class="footer-btn" id="permission-mode-btn">
                                         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">

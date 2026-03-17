@@ -3,6 +3,7 @@ package com.claudecode.jetbrains.ui
 import com.claudecode.jetbrains.services.ClaudeState
 import com.claudecode.jetbrains.services.ClaudeStateListener
 import com.claudecode.jetbrains.services.ClaudeStateService
+import com.claudecode.jetbrains.services.SessionUsage
 import com.claudecode.jetbrains.ui.chat.ChatToolWindow
 import com.claudecode.jetbrains.ui.theme.ClaudeColors
 import com.intellij.openapi.application.ApplicationManager
@@ -51,6 +52,9 @@ class ClaudeStatusBarWidget(
     @Volatile
     private var currentState = ClaudeState.READY
 
+    @Volatile
+    private var currentUsage: SessionUsage? = null
+
     init {
         stateService.addListener(this)
     }
@@ -71,10 +75,14 @@ class ClaudeStatusBarWidget(
     // -- TextPresentation --
 
     override fun getText(): String {
+        val usageSuffix = currentUsage?.let { u ->
+            if (u.contextPercent > 0) " (${u.contextPercent}%)" else ""
+        } ?: ""
         return when (currentState) {
-            ClaudeState.READY -> "Claude: Ready"
-            ClaudeState.THINKING -> "Claude: Thinking..."
-            ClaudeState.WAITING_FOR_PERMISSION -> "Claude: Permission"
+            ClaudeState.READY -> "Claude: Ready$usageSuffix"
+            ClaudeState.THINKING -> "Claude: Thinking...$usageSuffix"
+            ClaudeState.WAITING_FOR_PERMISSION ->
+                "Claude: Permission$usageSuffix"
         }
     }
 
@@ -105,6 +113,13 @@ class ClaudeStatusBarWidget(
 
     override fun onStateChanged(state: ClaudeState) {
         currentState = state
+        ApplicationManager.getApplication().invokeLater {
+            statusBar?.updateWidget(ID())
+        }
+    }
+
+    override fun onUsageUpdated(usage: SessionUsage) {
+        currentUsage = usage
         ApplicationManager.getApplication().invokeLater {
             statusBar?.updateWidget(ID())
         }
