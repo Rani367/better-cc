@@ -75,6 +75,23 @@ class ClaudeStateService(private val project: Project) : Disposable {
     var currentSessionId: String? = null
         private set
 
+    private val sessionStates =
+        java.util.concurrent.ConcurrentHashMap<String, ClaudeState>()
+
+    fun getSessionState(sessionId: String): ClaudeState =
+        sessionStates[sessionId] ?: ClaudeState.READY
+
+    fun getAllSessionStates(): Map<String, ClaudeState> =
+        sessionStates.toMap()
+
+    fun setSessionState(sessionId: String, newState: ClaudeState) {
+        sessionStates[sessionId] = newState
+    }
+
+    fun removeSessionState(sessionId: String) {
+        sessionStates.remove(sessionId)
+    }
+
     fun addListener(listener: ClaudeStateListener) {
         listeners.add(listener)
     }
@@ -86,6 +103,7 @@ class ClaudeStateService(private val project: Project) : Disposable {
     fun setState(newState: ClaudeState) {
         if (state != newState) {
             state = newState
+            currentSessionId?.let { setSessionState(it, newState) }
             for (l in listeners) {
                 l.onStateChanged(newState)
             }

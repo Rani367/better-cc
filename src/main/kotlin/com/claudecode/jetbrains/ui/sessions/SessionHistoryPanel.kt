@@ -2,6 +2,8 @@ package com.claudecode.jetbrains.ui.sessions
 
 import com.claudecode.jetbrains.cli.SessionInfo
 import com.claudecode.jetbrains.cli.SessionManager
+import com.claudecode.jetbrains.services.ClaudeState
+import com.claudecode.jetbrains.services.ClaudeStateService
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
@@ -214,17 +216,37 @@ class SessionHistoryPanel(
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         }
 
-        // Left side: title + timestamp
+        // Left side: status dot + title + timestamp
         val infoPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             isOpaque = false
         }
 
+        // Status dot + title row
+        val titleRow = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0))
+            .apply { isOpaque = false }
+        val stateService = ClaudeStateService.getInstance(project)
+        val sessionState = stateService.getSessionState(session.id)
+        val dotColor = when (sessionState) {
+            ClaudeState.THINKING -> java.awt.Color(0xDA, 0x77, 0x56)
+            ClaudeState.WAITING_FOR_PERMISSION ->
+                java.awt.Color(0xE1, 0xC0, 0x8D)
+            ClaudeState.READY -> java.awt.Color(0x74, 0xC9, 0x91)
+        }
+        val statusDot = JPanel().apply {
+            preferredSize = Dimension(8, 8)
+            maximumSize = Dimension(8, 8)
+            background = dotColor
+            isOpaque = true
+        }
+        titleRow.add(statusDot)
+
         val titleLabel = JBLabel(session.displayTitle()).apply {
             font = font.deriveFont(Font.PLAIN, 13f)
-            alignmentX = Component.LEFT_ALIGNMENT
         }
-        infoPanel.add(titleLabel)
+        titleRow.add(titleLabel)
+        titleRow.alignmentX = Component.LEFT_ALIGNMENT
+        infoPanel.add(titleRow)
 
         val dateFormat = SimpleDateFormat("MMM d, h:mm a")
         val timeStr = dateFormat.format(Date(session.lastActiveTime))
@@ -239,6 +261,17 @@ class SessionHistoryPanel(
             alignmentX = Component.LEFT_ALIGNMENT
         }
         infoPanel.add(metaLabel)
+
+        // Subtext: first prompt preview
+        if (session.firstPrompt.isNotBlank()) {
+            val preview = session.firstPrompt.take(80).replace('\n', ' ')
+            val subtextLabel = JBLabel(preview).apply {
+                font = font.deriveFont(Font.PLAIN, 11f)
+                foreground = JBColor.GRAY
+                alignmentX = Component.LEFT_ALIGNMENT
+            }
+            infoPanel.add(subtextLabel)
+        }
 
         row.add(infoPanel, BorderLayout.CENTER)
 
