@@ -269,6 +269,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         messageList.setModelLabel(modelDisplayText(settings.selectedModel))
         messageList.setThinkingLabel(settings.thinkingMode.displayName)
         messageList.setPermissionModeLabel(settings.permissionMode.displayName)
+        messageList.setSendHint(settings.useCtrlEnterToSend)
     }
 
     fun getContent(): JPanel = rootPanel

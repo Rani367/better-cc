@@ -1195,6 +1195,18 @@ function handleThinkingClick() {
     }
 }
 
+function setSendHint(useCtrlEnter) {
+    var el = document.getElementById('send-hint');
+    if (!el) return;
+    var isMac = navigator.platform.indexOf('Mac') > -1;
+    if (useCtrlEnter) {
+        el.textContent = (isMac ? '\u2318' : 'Ctrl') +
+            '+Enter to send';
+    } else {
+        el.textContent = 'Enter to send';
+    }
+}
+
 // ── Slash Command Dropdown ─────────────────────────────────────────
 
 var _slashCommands = [];

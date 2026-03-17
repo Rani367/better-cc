@@ -88,6 +88,14 @@
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt K"/>
         </action>
+        <action id="ClaudeCode.NewConversation"
+                class="com.claudecode.jetbrains.actions.NewConversationAction"
+                text="Claude Code: New Conversation"
+                description="Start a new conversation in the current Claude Code panel">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl N"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta N"/>
+            <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta N"/>
+        </action>
 
         <!-- Editor right-click context menu actions -->
         <group id="ClaudeCode.EditorPopupMenu" text="Claude Code" popup="true"

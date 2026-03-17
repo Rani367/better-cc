@@ -274,6 +274,10 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         executeJS("setSpinnerColor(${jsStringEscape(cssColor)})")
     }
 
+    fun setSendHint(useCtrlEnter: Boolean) {
+        executeJS("setSendHint($useCtrlEnter)")
+    }
+
     // ── Thinking block bridge methods ────────────────────────────
 
     fun addThinkingBlock(id: String) {
@@ -535,6 +539,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                                         <span id="thinking-label">Auto</span>
                                     </button>
                                     <div class="footer-spacer"></div>
+                                    <span class="send-hint" id="send-hint"></span>
                                     <span class="footer-btn" id="cost-label">${'$'}0.00</span>
                                     <button id="send-btn" disabled>
                                         <svg viewBox="0 0 16 16" fill="currentColor">
