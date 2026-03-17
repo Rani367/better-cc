@@ -131,6 +131,63 @@ class ClaudeSettingsComponent {
         isSelected = true
     }
 
+    val useTerminalCheckbox = JBCheckBox(
+        "Use terminal mode"
+    ).apply {
+        toolTipText = "Open Claude Code in a terminal tab " +
+            "instead of the native UI."
+    }
+
+    val disableLoginPromptCheckbox = JBCheckBox(
+        "Disable login prompt"
+    ).apply {
+        toolTipText = "Suppress authentication prompts on startup."
+    }
+
+    val enableNewConversationShortcutCheckbox = JBCheckBox(
+        "Enable new conversation shortcut"
+    ).apply {
+        toolTipText = "Enable the keyboard shortcut to open " +
+            "a new conversation."
+        isSelected = true
+    }
+
+    val usePythonEnvironmentCheckbox = JBCheckBox(
+        "Use Python environment"
+    ).apply {
+        toolTipText = "Detect and activate the workspace's " +
+            "Python virtual environment."
+        isSelected = true
+    }
+
+    val chatFontSizeField = JBTextField().apply {
+        toolTipText = "Font size for chat text (default: 13)."
+        emptyText.text = "13"
+    }
+
+    val chatFontFamilyField = JBTextField().apply {
+        toolTipText = "Font family for chat text. " +
+            "Leave blank for system default."
+        emptyText.text = "system default"
+    }
+
+    val editorFontSizeField = JBTextField().apply {
+        toolTipText = "Font size for code blocks (default: 12)."
+        emptyText.text = "12"
+    }
+
+    val editorFontFamilyField = JBTextField().apply {
+        toolTipText = "Font family for code blocks. " +
+            "Leave blank for editor default."
+        emptyText.text = "editor default"
+    }
+
+    val claudeProcessWrapperField = JBTextField().apply {
+        toolTipText = "Optional wrapper command for the Claude " +
+            "CLI process (e.g., 'env', 'nix-shell')."
+        emptyText.text = "none"
+    }
+
     // Environment variables table
     private val envTableModel = object : DefaultTableModel(
         arrayOf("Variable", "Value"), 0
@@ -221,12 +278,61 @@ class ClaudeSettingsComponent {
             preferredLocationCombo
         )
 
+        // Process wrapper
+        addLabeledField(
+            formPanel, gbc, row++,
+            "Process wrapper:",
+            claudeProcessWrapperField
+        )
+
         // Checkboxes — span both columns
         addCheckbox(formPanel, gbc, row++, autoSaveCheckbox)
         addCheckbox(formPanel, gbc, row++, useCtrlEnterCheckbox)
         addCheckbox(formPanel, gbc, row++, respectGitIgnoreCheckbox)
         addCheckbox(formPanel, gbc, row++, hideOnboardingCheckbox)
         addCheckbox(formPanel, gbc, row++, enableAnimationsCheckbox)
+        addCheckbox(formPanel, gbc, row++, useTerminalCheckbox)
+        addCheckbox(formPanel, gbc, row++, disableLoginPromptCheckbox)
+        addCheckbox(
+            formPanel, gbc, row++,
+            enableNewConversationShortcutCheckbox
+        )
+        addCheckbox(formPanel, gbc, row++, usePythonEnvironmentCheckbox)
+
+        // Font configuration section
+        gbc.gridx = 0
+        gbc.gridy = row
+        gbc.gridwidth = 2
+        gbc.weightx = 1.0
+        gbc.insets = Insets(12, 4, 4, 4)
+        formPanel.add(
+            JBLabel("Font Configuration").apply {
+                font = font.deriveFont(java.awt.Font.BOLD)
+            },
+            gbc
+        )
+        row++
+
+        addLabeledField(
+            formPanel, gbc, row++,
+            "Chat font family:",
+            chatFontFamilyField
+        )
+        addLabeledField(
+            formPanel, gbc, row++,
+            "Chat font size:",
+            chatFontSizeField
+        )
+        addLabeledField(
+            formPanel, gbc, row++,
+            "Code font family:",
+            editorFontFamilyField
+        )
+        addLabeledField(
+            formPanel, gbc, row++,
+            "Code font size:",
+            editorFontSizeField
+        )
 
         // Environment variables label
         gbc.gridx = 0

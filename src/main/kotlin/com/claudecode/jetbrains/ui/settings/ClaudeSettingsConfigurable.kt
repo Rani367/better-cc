@@ -37,6 +37,19 @@ class ClaudeSettingsConfigurable : Configurable {
             c.respectGitIgnoreCheckbox.isSelected != s.respectGitIgnore ||
             c.hideOnboardingCheckbox.isSelected != s.hideOnboarding ||
             c.enableAnimationsCheckbox.isSelected != s.enableAnimations ||
+            c.useTerminalCheckbox.isSelected != s.useTerminal ||
+            c.disableLoginPromptCheckbox.isSelected != s.disableLoginPrompt ||
+            c.enableNewConversationShortcutCheckbox.isSelected !=
+                s.enableNewConversationShortcut ||
+            c.usePythonEnvironmentCheckbox.isSelected !=
+                s.usePythonEnvironment ||
+            c.claudeProcessWrapperField.text != s.claudeProcessWrapper ||
+            c.chatFontFamilyField.text != s.chatFontFamily ||
+            (c.chatFontSizeField.text.toIntOrNull() ?: 13) !=
+                s.chatFontSize ||
+            c.editorFontFamilyField.text != s.editorFontFamily ||
+            (c.editorFontSizeField.text.toIntOrNull() ?: 12) !=
+                s.editorFontSize ||
             c.getEnvironmentVariables() != s.environmentVariables.toMap()
     }
 
@@ -55,6 +68,16 @@ class ClaudeSettingsConfigurable : Configurable {
         s.respectGitIgnore = c.respectGitIgnoreCheckbox.isSelected
         s.hideOnboarding = c.hideOnboardingCheckbox.isSelected
         s.enableAnimations = c.enableAnimationsCheckbox.isSelected
+        s.useTerminal = c.useTerminalCheckbox.isSelected
+        s.disableLoginPrompt = c.disableLoginPromptCheckbox.isSelected
+        s.enableNewConversationShortcut =
+            c.enableNewConversationShortcutCheckbox.isSelected
+        s.usePythonEnvironment = c.usePythonEnvironmentCheckbox.isSelected
+        s.claudeProcessWrapper = c.claudeProcessWrapperField.text
+        s.chatFontFamily = c.chatFontFamilyField.text
+        s.chatFontSize = c.chatFontSizeField.text.toIntOrNull() ?: 13
+        s.editorFontFamily = c.editorFontFamilyField.text
+        s.editorFontSize = c.editorFontSizeField.text.toIntOrNull() ?: 12
         s.environmentVariables = c.getEnvironmentVariables().toMutableMap()
 
         s.fireSettingsChanged()
@@ -73,6 +96,16 @@ class ClaudeSettingsConfigurable : Configurable {
         c.respectGitIgnoreCheckbox.isSelected = s.respectGitIgnore
         c.hideOnboardingCheckbox.isSelected = s.hideOnboarding
         c.enableAnimationsCheckbox.isSelected = s.enableAnimations
+        c.useTerminalCheckbox.isSelected = s.useTerminal
+        c.disableLoginPromptCheckbox.isSelected = s.disableLoginPrompt
+        c.enableNewConversationShortcutCheckbox.isSelected =
+            s.enableNewConversationShortcut
+        c.usePythonEnvironmentCheckbox.isSelected = s.usePythonEnvironment
+        c.claudeProcessWrapperField.text = s.claudeProcessWrapper
+        c.chatFontFamilyField.text = s.chatFontFamily
+        c.chatFontSizeField.text = s.chatFontSize.toString()
+        c.editorFontFamilyField.text = s.editorFontFamily
+        c.editorFontSizeField.text = s.editorFontSize.toString()
         c.setEnvironmentVariables(s.environmentVariables)
     }
 
@@ -93,6 +126,18 @@ class ClaudeSettingsConfigurable : Configurable {
         c.respectGitIgnoreCheckbox.isSelected = defaults.respectGitIgnore
         c.hideOnboardingCheckbox.isSelected = defaults.hideOnboarding
         c.enableAnimationsCheckbox.isSelected = defaults.enableAnimations
+        c.useTerminalCheckbox.isSelected = defaults.useTerminal
+        c.disableLoginPromptCheckbox.isSelected =
+            defaults.disableLoginPrompt
+        c.enableNewConversationShortcutCheckbox.isSelected =
+            defaults.enableNewConversationShortcut
+        c.usePythonEnvironmentCheckbox.isSelected =
+            defaults.usePythonEnvironment
+        c.claudeProcessWrapperField.text = defaults.claudeProcessWrapper
+        c.chatFontFamilyField.text = defaults.chatFontFamily
+        c.chatFontSizeField.text = defaults.chatFontSize.toString()
+        c.editorFontFamilyField.text = defaults.editorFontFamily
+        c.editorFontSizeField.text = defaults.editorFontSize.toString()
         c.setEnvironmentVariables(defaults.environmentVariables)
     }
 }

@@ -70,7 +70,20 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         var hideOnboarding: Boolean = false,
         var environmentVariables: MutableMap<String, String> = mutableMapOf(),
         var thinkingMode: String = "NORMAL",
-        var enableAnimations: Boolean = true
+        var enableAnimations: Boolean = true,
+        var useTerminal: Boolean = false,
+        var claudeProcessWrapper: String = "",
+        var disableLoginPrompt: Boolean = false,
+        var enableNewConversationShortcut: Boolean = true,
+        var usePythonEnvironment: Boolean = true,
+        var chatFontFamily: String = "",
+        var chatFontSize: Int = 13,
+        var editorFontFamily: String = "",
+        var editorFontSize: Int = 12,
+        var editorFontWeight: String = "normal",
+        var telemetryEnabled: Boolean = false,
+        var dismissedBanners: MutableSet<String> = mutableSetOf(),
+        var completedMilestones: MutableSet<String> = mutableSetOf()
     )
 
     private var state = State()
@@ -151,6 +164,84 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         get() = state.enableAnimations
         set(value) {
             state.enableAnimations = value
+        }
+
+    var useTerminal: Boolean
+        get() = state.useTerminal
+        set(value) {
+            state.useTerminal = value
+        }
+
+    var claudeProcessWrapper: String
+        get() = state.claudeProcessWrapper
+        set(value) {
+            state.claudeProcessWrapper = value
+        }
+
+    var disableLoginPrompt: Boolean
+        get() = state.disableLoginPrompt
+        set(value) {
+            state.disableLoginPrompt = value
+        }
+
+    var enableNewConversationShortcut: Boolean
+        get() = state.enableNewConversationShortcut
+        set(value) {
+            state.enableNewConversationShortcut = value
+        }
+
+    var usePythonEnvironment: Boolean
+        get() = state.usePythonEnvironment
+        set(value) {
+            state.usePythonEnvironment = value
+        }
+
+    var chatFontFamily: String
+        get() = state.chatFontFamily
+        set(value) {
+            state.chatFontFamily = value
+        }
+
+    var chatFontSize: Int
+        get() = state.chatFontSize
+        set(value) {
+            state.chatFontSize = value
+        }
+
+    var editorFontFamily: String
+        get() = state.editorFontFamily
+        set(value) {
+            state.editorFontFamily = value
+        }
+
+    var editorFontSize: Int
+        get() = state.editorFontSize
+        set(value) {
+            state.editorFontSize = value
+        }
+
+    var editorFontWeight: String
+        get() = state.editorFontWeight
+        set(value) {
+            state.editorFontWeight = value
+        }
+
+    var telemetryEnabled: Boolean
+        get() = state.telemetryEnabled
+        set(value) {
+            state.telemetryEnabled = value
+        }
+
+    var dismissedBanners: MutableSet<String>
+        get() = state.dismissedBanners
+        set(value) {
+            state.dismissedBanners = value
+        }
+
+    var completedMilestones: MutableSet<String>
+        get() = state.completedMilestones
+        set(value) {
+            state.completedMilestones = value
         }
 
     /**
