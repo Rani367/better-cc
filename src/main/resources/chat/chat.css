@@ -29,6 +29,13 @@
     --app-transparent-inner-border: rgba(0,0,0,0.07);
     --app-ghost-button-hover-background: #dfdfdf;
     --app-menu-background: #f5f5f5;
+    --app-claude-clay-button-orange: #c6613f;
+    --app-claude-ivory: #faf9f5;
+    --app-input-secondary-background: var(--app-menu-background);
+    --app-header-background: var(--app-primary-background);
+    --app-list-hover-background: var(--app-ghost-button-hover-background);
+    --app-list-active-background: var(--app-button-background);
+    --app-progressbar-background: var(--app-success-foreground);
 
     /* Spacing */
     --app-spacing-small: 4px;
@@ -70,6 +77,290 @@ html, body {
     line-height: 1.5;
     color: var(--app-primary-foreground);
     background: var(--app-primary-background);
+    display: flex;
+    flex: 1;
+}
+
+/* ── Chat Container (chatContainer_07S1Yg) ────────────────────── */
+#chat-container {
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    flex-direction: column;
+    flex: 1;
+    line-height: 1.5;
+}
+
+/* ── Header (header_aqhumA) ───────────────────────────────────── */
+#header {
+    display: flex;
+    border-bottom: 1px solid var(--app-primary-border-color);
+    background-color: var(--app-header-background);
+    user-select: none;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+}
+
+#sessions-button {
+    display: flex;
+    cursor: pointer;
+    outline: none;
+    overflow: hidden;
+    font-size: 13px;
+    font-family: inherit;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 300px;
+    padding: 2px 8px;
+    color: var(--app-primary-foreground);
+}
+
+#sessions-button:focus,
+#sessions-button:hover {
+    background: var(--app-ghost-button-hover-background);
+}
+
+.sessions-button-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.sessions-button-icon {
+    flex-shrink: 0;
+}
+
+.header-spacer {
+    flex: 1;
+}
+
+.header-btn {
+    display: flex;
+    cursor: pointer;
+    color: var(--app-secondary-foreground);
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+    padding: 4px;
+}
+
+.header-btn:hover {
+    background: var(--app-ghost-button-hover-background);
+    color: var(--app-primary-foreground);
+}
+
+.header-btn svg {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+}
+
+/* Status dot in header */
+.status-dot {
+    border: 1px solid var(--app-secondary-foreground);
+    opacity: 0.4;
+    box-sizing: border-box;
+    border-radius: 50%;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+}
+
+.status-dot.ready {
+    background: var(--app-success-foreground);
+    border-color: var(--app-success-foreground);
+    opacity: 1;
+}
+
+.status-dot.thinking {
+    background: var(--app-claude-orange);
+    border-color: var(--app-claude-orange);
+    opacity: 1;
+    animation: blink 1s linear infinite;
+}
+
+.status-dot.waiting {
+    background: var(--app-warning-accent);
+    border-color: var(--app-warning-accent);
+    opacity: 1;
+}
+
+/* ── Input Area (inputContainer_07S1Yg) ───────────────────────── */
+#input-area {
+    position: absolute;
+    display: flex;
+    z-index: 20;
+    flex-direction: column;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+}
+
+.input-wrapper {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+}
+
+.input-box {
+    background: var(--app-input-secondary-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-large);
+    color: var(--app-primary-foreground);
+    display: flex;
+    position: relative;
+    flex-direction: column;
+    min-width: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.input-box:focus-within {
+    border-color: var(--app-claude-orange);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--app-claude-orange), transparent 80%);
+}
+
+/* Inner background layer */
+.input-box-bg {
+    background: var(--app-input-background);
+    position: absolute;
+    border-radius: var(--corner-radius-large);
+    inset: 0;
+    pointer-events: none;
+}
+
+.message-input-container {
+    position: relative;
+    display: flex;
+    z-index: 1;
+}
+
+#message-input {
+    outline: none;
+    overflow-y: auto;
+    position: relative;
+    user-select: text;
+    flex: 1;
+    align-self: stretch;
+    min-height: 1.5em;
+    max-height: 200px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: 1.5;
+    color: var(--app-primary-foreground);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+#message-input:empty:before {
+    content: attr(data-placeholder);
+    color: var(--app-secondary-foreground);
+    opacity: 0.6;
+    pointer-events: none;
+    position: absolute;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 28px);
+}
+
+#message-input:focus {
+    outline: none;
+}
+
+/* ── Input Footer (inputFooter_gGYT1w) ────────────────────────── */
+.input-footer {
+    display: flex;
+    color: var(--app-secondary-foreground);
+    border-top: 0.5px solid var(--app-input-border);
+    z-index: 1;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 5px;
+}
+
+.footer-btn {
+    position: relative;
+    appearance: none;
+    color: var(--app-secondary-foreground);
+    cursor: pointer;
+    display: inline-flex;
+    background: transparent;
+    border: none;
+    border-radius: 2px;
+    flex-shrink: 1;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 2px 4px;
+    font-family: inherit;
+    font-size: 0.85em;
+}
+
+.footer-btn span {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    display: inline-block;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 200px;
+}
+
+.footer-btn:hover {
+    background-color: var(--app-ghost-button-hover-background);
+}
+
+.footer-btn svg {
+    flex-shrink: 0;
+    height: 1em;
+}
+
+.footer-spacer {
+    flex: 1;
+}
+
+/* ── Send Button (sendButton_gGYT1w) ──────────────────────────── */
+#send-btn {
+    cursor: pointer;
+    display: flex;
+    color: var(--app-claude-ivory);
+    background-color: var(--app-claude-clay-button-orange);
+    border: none;
+    border-radius: 5px;
+    justify-content: center;
+    align-items: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+}
+
+#send-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+#send-btn:hover:not(:disabled) {
+    filter: brightness(1.1);
+}
+
+#send-btn:active:not(:disabled) {
+    filter: brightness(0.9);
+}
+
+#send-btn svg {
+    width: 12px;
+    height: 12px;
 }
 
 /* ── Animations ─────────────────────────────────────────────── */
@@ -89,10 +380,10 @@ html, body {
 
 /* ── Messages Container (messagesContainer_07S1Yg) ──────────── */
 #messages {
-    padding: 20px 20px 40px;
+    padding: 20px 20px 120px;
     overflow-y: auto;
     overflow-x: hidden;
-    height: 100%;
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -444,9 +735,9 @@ html, body {
     height: 14px;
 }
 
-/* Tool name — bold, 4px right margin */
+/* Tool name — semibold, 4px right margin */
 .tool-name {
-    font-weight: 700;
+    font-weight: 600;
     font-size: 13px;
     color: var(--app-primary-foreground);
     flex-shrink: 0;
@@ -1217,6 +1508,236 @@ html, body {
 
 .rewind-menu {
     max-width: calc(100vw - 16px);
+}
+
+/* ── Thinking Blocks (collapsible extended thinking) ────────── */
+.thinking-block {
+    margin: 8px 0;
+    border-radius: 5px;
+    border: 0.5px solid var(--app-input-border);
+    background: var(--app-tool-background);
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.thinking-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.5;
+}
+
+.thinking-header:hover {
+    background: var(--app-ghost-button-hover-background);
+}
+
+.thinking-chevron {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--app-secondary-foreground);
+    transition: transform 0.15s;
+    font-size: 10px;
+}
+
+.thinking-block.expanded .thinking-chevron {
+    transform: rotate(90deg);
+}
+
+.thinking-label {
+    font-size: 0.9em;
+    font-style: italic;
+    color: var(--app-secondary-foreground);
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.thinking-content {
+    display: none;
+    border-top: 0.5px solid var(--app-input-border);
+    padding: 8px;
+    font-size: 0.9em;
+    color: var(--app-secondary-foreground);
+    opacity: 0.8;
+    line-height: 1.5;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--app-monospace-font-family);
+    font-size: var(--app-monospace-font-size-small);
+}
+
+.thinking-block.expanded .thinking-content {
+    display: block;
+}
+
+/* ── Message Hover Actions ─────────────────────────────────── */
+.message-hover-actions {
+    position: absolute;
+    top: 4px;
+    right: 0;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 5;
+    background: var(--app-primary-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-small);
+    padding: 2px;
+}
+
+.message-assistant:hover > .message-hover-actions {
+    opacity: 1;
+}
+
+.hover-action-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: var(--corner-radius-small);
+    color: var(--app-secondary-foreground);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.15s;
+}
+
+.hover-action-btn:hover {
+    background: var(--app-ghost-button-hover-background);
+    color: var(--app-primary-foreground);
+}
+
+.hover-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ── Empty State ───────────────────────────────────────────── */
+#empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 12px;
+    padding: 20px;
+    animation: fadeIn 0.3s ease-in-out;
+    user-select: none;
+}
+
+.empty-state-content {
+    position: relative;
+    top: -30px;
+    text-align: center;
+    max-width: 480px;
+}
+
+.empty-ascii {
+    color: var(--app-claude-orange);
+    font-family: var(--app-monospace-font-family);
+    font-size: 12px;
+    line-height: 1.3;
+    text-align: center;
+    white-space: pre;
+    user-select: none;
+}
+
+.empty-prompt {
+    color: var(--app-secondary-foreground);
+    font-family: var(--app-monospace-font-family);
+    font-size: 10px;
+    text-align: center;
+}
+
+/* ── Usage Bar ─────────────────────────────────────────────── */
+.usage-bar {
+    height: 4px;
+    background: var(--app-primary-border-color);
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 4px 0;
+    width: 100%;
+}
+
+.usage-fill {
+    height: 100%;
+    background: var(--app-success-foreground);
+    border-radius: 2px;
+    transition: width 0.3s, background 0.3s;
+}
+
+.usage-fill.warning {
+    background: var(--app-warning-accent);
+}
+
+.usage-fill.danger {
+    background: var(--app-error-foreground);
+}
+
+/* ── Slash Command Dropdown ─────────────────────────────────── */
+.slash-dropdown {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--app-secondary-background);
+    border: 1px solid var(--app-input-border);
+    border-radius: var(--corner-radius-medium);
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+    z-index: 30;
+    margin-bottom: 4px;
+    display: none;
+}
+
+.slash-dropdown.visible {
+    display: block;
+}
+
+.slash-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--app-primary-foreground);
+}
+
+.slash-item:hover,
+.slash-item.selected {
+    background: var(--app-ghost-button-hover-background);
+}
+
+.slash-item-name {
+    font-weight: 600;
+    font-family: var(--app-monospace-font-family);
+    font-size: 0.9em;
+    flex-shrink: 0;
+}
+
+.slash-item-desc {
+    color: var(--app-secondary-foreground);
+    font-size: 0.85em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Hide tool body when viewport < 500px */

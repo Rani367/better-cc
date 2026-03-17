@@ -111,4 +111,7 @@ object ClaudeColors {
         "ProgressBar.progressColor",
         JBColor(0x528bff, 0x365880)
     )
+
+    // ── Additional VS Code parity vars ──────────────────────────
+    val CLAUDE_CLAY_BUTTON_ORANGE = JBColor(0xc6613f, 0xd97757)
 }

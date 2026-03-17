@@ -103,6 +103,7 @@ function updateTimelineClasses() {
  * Add a finalized message (user messages, errors, or pre-rendered assistant messages).
  */
 function addMessage(id, sender, content) {
+    showEmptyState(false);
     var container = document.getElementById('messages');
     var cls = senderClass(sender);
 
@@ -130,7 +131,8 @@ function addMessage(id, sender, content) {
     } else if (sender === 'ASSISTANT') {
         // Assistant message: timeline layout, no bubble
         div.className = 'message message-assistant';
-        div.innerHTML = '<div class="message-content">' + renderMarkdown(content) + '</div>';
+        div.innerHTML = '<div class="message-content">' + renderMarkdown(content) + '</div>' +
+            createHoverActions(id);
     } else if (sender === 'ERROR') {
         div.className = 'message message-error';
         div.innerHTML = '<div class="message-content">' + escapeHtml(content) + '</div>';
@@ -159,6 +161,7 @@ var _streamAnim = {};
  * decoupling bursty network data from smooth visual display.
  */
 function updateStreamingMessage(id, markdown) {
+    showEmptyState(false);
     var state = _streamAnim[id];
     if (!state) {
         // Create the message div — timeline layout
@@ -233,6 +236,10 @@ function finalizeMessage(id) {
         var contentDiv = msg.querySelector('.message-content');
         contentDiv.innerHTML = renderMarkdown(rawMarkdown);
         postProcessFilePaths(contentDiv);
+        // Add hover actions if not already present
+        if (!msg.querySelector('.message-hover-actions')) {
+            msg.insertAdjacentHTML('beforeend', createHoverActions(id));
+        }
         updateTimelineClasses();
         scrollToBottom();
     }
@@ -314,11 +321,13 @@ function clearMessages() {
     }
     _streamAnim = {};
     _timelineCount = 0;
+    _thinkingBlocks = {};
 
     var container = document.getElementById('messages');
     container.innerHTML = '';
     _codeBlocks = {};
     showThinking(false);
+    showEmptyState(true);
 }
 
 // ── Tool Use Blocks ─────────────────────────────────────────────
@@ -341,6 +350,7 @@ function toolIcon(category) {
 }
 
 function addToolBlock(id, name, category, summary, isRunning) {
+    showEmptyState(false);
     var container = document.getElementById('messages');
 
     // Tool blocks are wrapped in a timeline message
@@ -442,6 +452,7 @@ function permissionIcon() {
 }
 
 function addPermissionCard(requestId, toolName, category, argumentsSummary, riskLevel) {
+    showEmptyState(false);
     var container = document.getElementById('messages');
 
     // Permission cards are wrapped in a timeline message
@@ -823,6 +834,450 @@ function summarizeIcon() {
     '</svg>';
 }
 
+// ── Thinking Blocks ──────────────────────────────────────────────
+
+var _thinkingBlocks = {};
+
+/**
+ * Add a collapsible thinking block in the timeline.
+ */
+function addThinkingBlock(id) {
+    showEmptyState(false);
+    var container = document.getElementById('messages');
+
+    var wrapper = document.createElement('div');
+    wrapper.id = 'thinking-wrapper-' + id;
+    wrapper.className = 'message message-assistant dot-progress';
+
+    var block = document.createElement('div');
+    block.id = 'thinking-block-' + id;
+    block.className = 'thinking-block';
+    block.innerHTML =
+        '<div class="thinking-header" onclick="toggleThinkingBlock(\'' + escapeHtml(id) + '\')">' +
+            '<span class="thinking-chevron">\u25B6</span>' +
+            '<span class="thinking-label">Thinking\u2026</span>' +
+        '</div>' +
+        '<div class="thinking-content"></div>';
+
+    wrapper.appendChild(block);
+    container.appendChild(wrapper);
+    _thinkingBlocks[id] = { text: '' };
+
+    // Hide the 3-dot thinking indicator when we have a real thinking block
+    showThinking(false);
+
+    updateTimelineClasses();
+    scrollToBottom();
+}
+
+/**
+ * Append text to a thinking block's content.
+ */
+function updateThinkingBlock(id, text) {
+    var state = _thinkingBlocks[id];
+    if (!state) return;
+    state.text = text;
+
+    var block = document.getElementById('thinking-block-' + id);
+    if (!block) return;
+
+    var contentEl = block.querySelector('.thinking-content');
+    if (contentEl) {
+        contentEl.textContent = text;
+    }
+
+    // Update label with preview
+    var labelEl = block.querySelector('.thinking-label');
+    if (labelEl) {
+        var preview = text.substring(0, 80).replace(/\n/g, ' ');
+        if (text.length > 80) preview += '\u2026';
+        labelEl.textContent = 'Thinking: ' + preview;
+    }
+
+    scrollToBottom();
+}
+
+/**
+ * Finalize a thinking block — change dot from blinking to green.
+ */
+function finalizeThinkingBlock(id) {
+    var state = _thinkingBlocks[id];
+    if (!state) return;
+
+    var wrapper = document.getElementById('thinking-wrapper-' + id);
+    if (wrapper) {
+        wrapper.classList.remove('dot-progress');
+        wrapper.classList.add('dot-success');
+    }
+
+    var block = document.getElementById('thinking-block-' + id);
+    if (block) {
+        var labelEl = block.querySelector('.thinking-label');
+        if (labelEl) {
+            var wordCount = state.text.split(/\s+/).length;
+            labelEl.textContent = 'Thought for ' + wordCount + ' words';
+        }
+    }
+
+    updateTimelineClasses();
+}
+
+/**
+ * Toggle expand/collapse of a thinking block.
+ */
+function toggleThinkingBlock(id) {
+    var block = document.getElementById('thinking-block-' + id);
+    if (!block) return;
+    block.classList.toggle('expanded');
+}
+
+// ── Message Hover Actions ────────────────────────────────────────
+
+function copyIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<rect x="5" y="5" width="8" height="8" rx="1"/>' +
+        '<path d="M3 11V3h8"/></svg>';
+}
+
+function retryIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<path d="M3 8a5 5 0 019.54-2M13 8a5 5 0 01-9.54 2"/>' +
+        '<path d="M12 3v3h-3M4 13v-3h3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+}
+
+function forkIcon() {
+    return '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">' +
+        '<circle cx="5" cy="4" r="2"/><circle cx="11" cy="4" r="2"/><circle cx="5" cy="12" r="2"/>' +
+        '<path d="M5 6v4M11 6c0 3-6 3-6 6"/></svg>';
+}
+
+function createHoverActions(messageId) {
+    return '<div class="message-hover-actions">' +
+        '<button class="hover-action-btn" title="Copy" onclick="copyMessageContent(\'' + escapeHtml(messageId) + '\')">' +
+            copyIcon() +
+        '</button>' +
+        '<button class="hover-action-btn" title="Fork" onclick="forkFromMessage(\'' + escapeHtml(messageId) + '\')">' +
+            forkIcon() +
+        '</button>' +
+        '<button class="hover-action-btn" title="Retry" onclick="retryFromMessage(\'' + escapeHtml(messageId) + '\')">' +
+            retryIcon() +
+        '</button>' +
+    '</div>';
+}
+
+function copyMessageContent(messageId) {
+    var msg = document.getElementById('msg-' + messageId);
+    if (!msg) return;
+    var raw = msg.getAttribute('data-raw');
+    var text = raw || (msg.querySelector('.message-content') || {}).textContent || '';
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'copy', code: text }));
+    }
+}
+
+function retryFromMessage(messageId) {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'retryMessage', messageId: messageId }));
+    }
+}
+
+function forkFromMessage(messageId) {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'forkMessage', messageId: messageId }));
+    }
+}
+
+// ── Empty State ──────────────────────────────────────────────────
+
+function showEmptyState(visible) {
+    var el = document.getElementById('empty-state');
+    if (el) {
+        el.style.display = visible ? 'flex' : 'none';
+    }
+    var msgs = document.getElementById('messages');
+    if (msgs) {
+        msgs.style.display = visible ? 'none' : 'flex';
+    }
+}
+
+// ── Header Functions ────────────────────────────────────────────────
+
+function handleSessionsClick() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'sessionsClick' }));
+    }
+}
+
+function handleNewConversation() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'newConversation' }));
+    }
+}
+
+function handleSettings() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'settings' }));
+    }
+}
+
+function setSessionTitle(title) {
+    var el = document.getElementById('session-title');
+    if (el) el.textContent = title;
+}
+
+function setStatusDot(state) {
+    var el = document.getElementById('status-dot');
+    if (!el) return;
+    el.className = 'status-dot';
+    if (state) el.classList.add(state);
+}
+
+// ── Input Functions ────────────────────────────────────────────────
+
+function handleSend() {
+    var input = document.getElementById('message-input');
+    if (!input) return;
+    var text = (input.innerText || input.textContent || '').trim();
+    if (!text) return;
+    // Dismiss slash dropdown
+    _dismissSlashDropdown();
+    input.textContent = '';
+    _updateSendButtonState();
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'sendMessage', text: text }));
+    }
+}
+
+function handleInputKeyDown(e) {
+    // Slash command dropdown navigation
+    var dropdown = document.getElementById('slash-dropdown');
+    if (dropdown && dropdown.classList.contains('visible')) {
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            _slashDropdownMove(1);
+            return;
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            _slashDropdownMove(-1);
+            return;
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            _slashDropdownSelect();
+            return;
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            _dismissSlashDropdown();
+            return;
+        }
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+    }
+}
+
+function setInputEnabled(enabled) {
+    var input = document.getElementById('message-input');
+    var btn = document.getElementById('send-btn');
+    if (input) {
+        input.contentEditable = enabled ? 'true' : 'false';
+        input.style.opacity = enabled ? '1' : '0.6';
+    }
+    if (btn) {
+        btn.disabled = !enabled;
+    }
+}
+
+function focusInput() {
+    var input = document.getElementById('message-input');
+    if (input) {
+        input.focus();
+    }
+}
+
+function setInputText(text) {
+    var input = document.getElementById('message-input');
+    if (input) {
+        input.textContent = text;
+        // Move cursor to end
+        var range = document.createRange();
+        range.selectNodeContents(input);
+        range.collapse(false);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        _updateSendButtonState();
+    }
+}
+
+function insertTextAtCursor(text) {
+    var input = document.getElementById('message-input');
+    if (!input) return;
+    input.focus();
+    document.execCommand('insertText', false, text);
+    _updateSendButtonState();
+}
+
+function _updateSendButtonState() {
+    var input = document.getElementById('message-input');
+    var btn = document.getElementById('send-btn');
+    if (input && btn) {
+        var text = (input.innerText || input.textContent || '').trim();
+        btn.disabled = text.length === 0;
+    }
+}
+
+// ── Footer Update Functions ────────────────────────────────────────
+
+function setModelLabel(text) {
+    var el = document.getElementById('model-label');
+    if (el) el.textContent = text;
+}
+
+function setCostLabel(text) {
+    var el = document.getElementById('cost-label');
+    if (el) el.textContent = text;
+}
+
+function setPermissionModeLabel(text) {
+    var el = document.getElementById('permission-mode-label');
+    if (el) el.textContent = text;
+}
+
+function setThinkingLabel(text) {
+    var el = document.getElementById('thinking-label');
+    if (el) el.textContent = text;
+}
+
+function handleModelClick() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'modelClick' }));
+    }
+}
+
+function handlePermissionModeClick() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'permissionModeClick' }));
+    }
+}
+
+function handleThinkingClick() {
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'thinkingClick' }));
+    }
+}
+
+// ── Slash Command Dropdown ─────────────────────────────────────────
+
+var _slashCommands = [];
+var _slashSelectedIndex = 0;
+
+function _initSlashCommands(commandsJson) {
+    try {
+        _slashCommands = JSON.parse(commandsJson);
+    } catch (e) {
+        _slashCommands = [];
+    }
+}
+
+function _onInputChange() {
+    var input = document.getElementById('message-input');
+    if (!input) return;
+    _updateSendButtonState();
+
+    var text = (input.innerText || input.textContent || '').trim();
+    if (text.startsWith('/') && text.indexOf('\n') === -1) {
+        _showSlashDropdown(text);
+    } else {
+        _dismissSlashDropdown();
+    }
+}
+
+function _showSlashDropdown(query) {
+    var dropdown = document.getElementById('slash-dropdown');
+    if (!dropdown) return;
+
+    var normalized = query.replace(/^\//, '').toLowerCase();
+    var filtered = _slashCommands.filter(function(cmd) {
+        return cmd.name.replace(/^\//, '').toLowerCase().indexOf(normalized) === 0;
+    });
+
+    if (filtered.length === 0) {
+        _dismissSlashDropdown();
+        return;
+    }
+
+    _slashSelectedIndex = 0;
+    dropdown.innerHTML = '';
+    for (var i = 0; i < filtered.length; i++) {
+        var item = document.createElement('div');
+        item.className = 'slash-item' + (i === 0 ? ' selected' : '');
+        item.setAttribute('data-index', i);
+        item.setAttribute('data-name', filtered[i].name);
+        item.innerHTML =
+            '<span class="slash-item-name">' + escapeHtml(filtered[i].name) + '</span>' +
+            '<span class="slash-item-desc">' + escapeHtml(filtered[i].description) + '</span>';
+        item.onclick = (function(idx) {
+            return function() {
+                _slashSelectedIndex = idx;
+                _slashDropdownSelect();
+            };
+        })(i);
+        dropdown.appendChild(item);
+    }
+    dropdown.classList.add('visible');
+}
+
+function _dismissSlashDropdown() {
+    var dropdown = document.getElementById('slash-dropdown');
+    if (dropdown) {
+        dropdown.classList.remove('visible');
+        dropdown.innerHTML = '';
+    }
+}
+
+function _slashDropdownMove(delta) {
+    var dropdown = document.getElementById('slash-dropdown');
+    if (!dropdown) return;
+    var items = dropdown.querySelectorAll('.slash-item');
+    if (items.length === 0) return;
+    items[_slashSelectedIndex].classList.remove('selected');
+    _slashSelectedIndex = (_slashSelectedIndex + delta + items.length) % items.length;
+    items[_slashSelectedIndex].classList.add('selected');
+    items[_slashSelectedIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function _slashDropdownSelect() {
+    var dropdown = document.getElementById('slash-dropdown');
+    if (!dropdown) return;
+    var items = dropdown.querySelectorAll('.slash-item');
+    if (items.length === 0 || _slashSelectedIndex >= items.length) return;
+    var name = items[_slashSelectedIndex].getAttribute('data-name');
+    _dismissSlashDropdown();
+    // Clear input and send the command to Kotlin
+    var input = document.getElementById('message-input');
+    if (input) input.textContent = '';
+    _updateSendButtonState();
+    if (sendToKotlin) {
+        sendToKotlin(JSON.stringify({ action: 'slashCommand', command: name }));
+    }
+}
+
+// ── Usage Bar ────────────────────────────────────────────────────
+
+function updateUsageBar(percent, label) {
+    var bar = document.getElementById('usage-bar');
+    if (!bar) return;
+    var fill = bar.querySelector('.usage-fill');
+    if (!fill) return;
+    fill.style.width = Math.min(percent, 100) + '%';
+    fill.className = 'usage-fill';
+    if (percent >= 80) fill.classList.add('danger');
+    else if (percent >= 60) fill.classList.add('warning');
+    bar.title = label || (percent + '% context used');
+}
+
 /**
  * Remove all message elements from the given message ID onwards.
  * Used when rewinding conversation.
@@ -901,4 +1356,44 @@ function setRewindBadge(messageId, fileCount) {
     } else if (existing) {
         existing.remove();
     }
+}
+
+// ── Page Initialization ─────────────────────────────────────────────
+
+/**
+ * Set up all event listeners for header, input, and footer buttons.
+ * Called once from the HTML after all scripts are loaded.
+ * Uses addEventListener instead of inline onclick for JCEF compatibility.
+ */
+function _initPage() {
+    // Header buttons
+    var sessionsBtn = document.getElementById('sessions-button');
+    if (sessionsBtn) sessionsBtn.addEventListener('click', handleSessionsClick);
+
+    var newConvBtn = document.getElementById('new-conversation-btn');
+    if (newConvBtn) newConvBtn.addEventListener('click', handleNewConversation);
+
+    var settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) settingsBtn.addEventListener('click', handleSettings);
+
+    // Input area
+    var messageInput = document.getElementById('message-input');
+    if (messageInput) {
+        messageInput.addEventListener('keydown', handleInputKeyDown);
+        messageInput.addEventListener('input', _onInputChange);
+    }
+
+    // Footer buttons
+    var permModeBtn = document.getElementById('permission-mode-btn');
+    if (permModeBtn) permModeBtn.addEventListener('click', handlePermissionModeClick);
+
+    var modelBtn = document.getElementById('model-btn');
+    if (modelBtn) modelBtn.addEventListener('click', handleModelClick);
+
+    var thinkingBtn = document.getElementById('thinking-btn');
+    if (thinkingBtn) thinkingBtn.addEventListener('click', handleThinkingClick);
+
+    // Send button
+    var sendBtn = document.getElementById('send-btn');
+    if (sendBtn) sendBtn.addEventListener('click', handleSend);
 }

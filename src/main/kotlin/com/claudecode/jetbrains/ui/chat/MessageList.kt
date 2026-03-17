@@ -1,6 +1,7 @@
 package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.cli.PermissionRequest
+import com.claudecode.jetbrains.ui.commands.SlashCommandRegistry
 import com.google.gson.Gson
 import com.google.gson.JsonPrimitive
 import com.intellij.openapi.Disposable
@@ -19,11 +20,9 @@ import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Font
 import javax.swing.BorderFactory
-import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
-import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 class MessageList(private val project: Project, parentDisposable: Disposable) : JPanel(CardLayout()) {
@@ -41,58 +40,13 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
     private val fallbackTextArea: JTextArea?
     private val fallbackScrollPane: JScrollPane?
 
-    // Empty state (emptyState_07S1Yg) — centered, offset 30px up, with ASCII art
-    @Suppress("SpellCheckingInspection")
-    private val asciiArt = """
-        |     ╭───────╮
-        |    ╱  ●   ●  ╲
-        |   │     ◡     │
-        |    ╲           ╱
-        |     ╰─────────╯
-    """.trimMargin()
-
-    private val emptyPanel = JPanel(java.awt.GridBagLayout()).apply {
-        val gbc = java.awt.GridBagConstraints().apply {
-            anchor = java.awt.GridBagConstraints.CENTER
-            gridx = 0
-            insets = java.awt.Insets(-JBUI.scale(30), 0, 0, 0)
-        }
-
-        // ASCII art
-        gbc.gridy = 0
-        add(JLabel(
-            "<html><pre style='text-align:center;color:#d97757;font-size:12px;'>" +
-                asciiArt.replace("\n", "<br>") + "</pre></html>"
-        ).apply {
-            horizontalAlignment = SwingConstants.CENTER
-        }, gbc)
-
-        // Text
-        gbc.gridy = 1
-        gbc.insets = java.awt.Insets(JBUI.scale(8), 0, 0, 0)
-        add(JLabel(
-            "<html><div style='text-align:center;font-family:monospace;font-size:10px;" +
-                "color:gray;'>What can I help you with?</div></html>"
-        ).apply {
-            horizontalAlignment = SwingConstants.CENTER
-            foreground = JBColor.GRAY
-        }, gbc)
-
-        isOpaque = true
-    }
-
     private var hasMessages = false
 
     init {
-        add(emptyPanel, CARD_EMPTY)
-
         if (JBCefApp.isSupported()) {
             browser = JBCefBrowser()
             fallbackTextArea = null
             fallbackScrollPane = null
-
-            // Make browser not steal focus
-            browser.component.isFocusable = false
 
             val browserPanel = JPanel(BorderLayout()).apply {
                 add(browser.component, BorderLayout.CENTER)
@@ -134,14 +88,11 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
             add(fallbackScrollPane, CARD_MESSAGES)
         }
 
-        showCard(CARD_EMPTY)
+        showCard(CARD_MESSAGES)
     }
 
     fun addMessage(message: ChatMessage) {
-        if (!hasMessages) {
-            hasMessages = true
-            showCard(CARD_MESSAGES)
-        }
+        hasMessages = true
 
         if (browser != null) {
             val escapedText = jsStringEscape(message.text)
@@ -161,10 +112,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
 
     fun updateStreamingMessage(id: String, markdown: String) {
         if (browser != null) {
-            if (!hasMessages) {
-                hasMessages = true
-                showCard(CARD_MESSAGES)
-            }
+            hasMessages = true
             executeJS("updateStreamingMessage(${jsStringEscape(id)}, ${jsStringEscape(markdown)})")
         } else {
             // Fallback: just show the latest text
@@ -180,10 +128,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
 
     fun showThinking(visible: Boolean) {
         if (browser != null) {
-            if (visible && !hasMessages) {
-                hasMessages = true
-                showCard(CARD_MESSAGES)
-            }
+            hasMessages = true
             executeJS("showThinking($visible)")
         } else {
             if (visible) {
@@ -193,10 +138,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
     }
 
     fun addToolBlock(tool: ToolUseState) {
-        if (!hasMessages) {
-            hasMessages = true
-            showCard(CARD_MESSAGES)
-        }
+        hasMessages = true
         if (browser != null) {
             val id = jsStringEscape(tool.toolUseId)
             val name = jsStringEscape(tool.toolName)
@@ -225,10 +167,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
     }
 
     fun addPermissionCard(request: PermissionRequest) {
-        if (!hasMessages) {
-            hasMessages = true
-            showCard(CARD_MESSAGES)
-        }
+        hasMessages = true
         if (browser != null) {
             val id = jsStringEscape(request.requestId)
             val toolName = jsStringEscape(request.toolName)
@@ -245,6 +184,122 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
 
     fun setRewindHandler(handler: (String, String) -> Unit) {
         codeBlockRenderer?.rewindHandler = handler
+    }
+
+    fun setRetryHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.retryHandler = handler
+    }
+
+    fun setForkHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.forkHandler = handler
+    }
+
+    // ── Header bridge methods ──────────────────────────────────────
+
+    fun setSendMessageHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.sendMessageHandler = handler
+    }
+
+    fun setNewConversationHandler(handler: () -> Unit) {
+        codeBlockRenderer?.newConversationHandler = handler
+    }
+
+    fun setSessionsClickHandler(handler: () -> Unit) {
+        codeBlockRenderer?.sessionsClickHandler = handler
+    }
+
+    fun setSettingsHandler(handler: () -> Unit) {
+        codeBlockRenderer?.settingsHandler = handler
+    }
+
+    fun setSlashCommandHandler(handler: (String) -> Unit) {
+        codeBlockRenderer?.slashCommandHandler = handler
+    }
+
+    fun setModelClickHandler(handler: () -> Unit) {
+        codeBlockRenderer?.modelClickHandler = handler
+    }
+
+    fun setPermissionModeClickHandler(handler: () -> Unit) {
+        codeBlockRenderer?.permissionModeClickHandler = handler
+    }
+
+    fun setThinkingClickHandler(handler: () -> Unit) {
+        codeBlockRenderer?.thinkingClickHandler = handler
+    }
+
+    // ── Header/input state updates (JS bridge) ─────────────────────
+
+    fun setSessionTitle(title: String) {
+        executeJS("setSessionTitle(${jsStringEscape(title)})")
+    }
+
+    fun setStatusDot(state: String) {
+        executeJS("setStatusDot(${jsStringEscape(state)})")
+    }
+
+    fun setInputEnabled(enabled: Boolean) {
+        executeJS("setInputEnabled($enabled)")
+    }
+
+    fun focusInput() {
+        executeJS("focusInput()")
+    }
+
+    fun setInputText(text: String) {
+        executeJS("setInputText(${jsStringEscape(text)})")
+    }
+
+    fun insertTextAtCursor(text: String) {
+        executeJS("insertTextAtCursor(${jsStringEscape(text)})")
+    }
+
+    fun setModelLabel(text: String) {
+        executeJS("setModelLabel(${jsStringEscape(text)})")
+    }
+
+    fun setCostLabel(text: String) {
+        executeJS("setCostLabel(${jsStringEscape(text)})")
+    }
+
+    fun setPermissionModeLabel(text: String) {
+        executeJS("setPermissionModeLabel(${jsStringEscape(text)})")
+    }
+
+    fun setThinkingLabel(text: String) {
+        executeJS("setThinkingLabel(${jsStringEscape(text)})")
+    }
+
+    // ── Thinking block bridge methods ────────────────────────────
+
+    fun addThinkingBlock(id: String) {
+        if (!hasMessages) {
+            hasMessages = true
+            showCard(CARD_MESSAGES)
+        }
+        if (browser != null) {
+            executeJS("addThinkingBlock(${jsStringEscape(id)})")
+        }
+    }
+
+    fun updateThinkingBlock(id: String, text: String) {
+        if (browser != null) {
+            executeJS("updateThinkingBlock(${jsStringEscape(id)}, ${jsStringEscape(text)})")
+        }
+    }
+
+    fun finalizeThinkingBlock(id: String) {
+        if (browser != null) {
+            executeJS("finalizeThinkingBlock(${jsStringEscape(id)})")
+        }
+    }
+
+    // ── Usage bar bridge ─────────────────────────────────────────
+
+    fun updateUsageBar(percent: Int, label: String) {
+        if (browser != null) {
+            executeJS("updateUsageBar($percent, ${jsStringEscape(label)})")
+        }
     }
 
     /**
@@ -311,7 +366,6 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
 
     fun clearMessages() {
         hasMessages = false
-        showCard(CARD_EMPTY)
         if (browser != null) {
             executeJS("clearMessages()")
         } else {
@@ -363,6 +417,7 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         browser.cefBrowser.executeJavaScript(js, browser.cefBrowser.url, 0)
     }
 
+    @Suppress("LongMethod")
     private fun buildHtml(): String {
         val markedJs = readResource("/chat/marked.min.js")
         val highlightJs = readResource("/chat/highlight.min.js")
@@ -370,6 +425,13 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
         val highlightDarkCss = readResource("/chat/highlight-dark.css")
         val chatCss = readResource("/chat/chat.css")
         val chatJs = readResource("/chat/chat.js")
+
+        // Build slash commands JSON for the dropdown
+        val slashCommandsJson = gson.toJson(
+            SlashCommandRegistry.ALL_COMMANDS.map { cmd ->
+                mapOf("name" to cmd.name, "description" to cmd.description)
+            }
+        )
 
         return """
             <!DOCTYPE html>
@@ -381,15 +443,112 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
                 <style>$chatCss</style>
             </head>
             <body>
-                <div id="messages"></div>
-                <div id="thinking" class="thinking-indicator" style="display:none">
-                    <span class="thinking-dot"></span>
-                    <span class="thinking-dot"></span>
-                    <span class="thinking-dot"></span>
+                <div id="chat-container">
+                    <!-- Header -->
+                    <header id="header">
+                        <button id="sessions-button">
+                            <span class="status-dot" id="status-dot"></span>
+                            <span class="sessions-button-text" id="session-title">New Conversation</span>
+                            <span class="sessions-button-icon">
+                                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
+                                    <path d="M4 6l4 4 4-4"/>
+                                </svg>
+                            </span>
+                        </button>
+                        <div class="header-spacer"></div>
+                        <button class="header-btn" id="new-conversation-btn" title="New Conversation">
+                            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M8 3v10M3 8h10"/>
+                            </svg>
+                        </button>
+                        <button class="header-btn" id="settings-btn" title="Settings">
+                            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="8" cy="8" r="2.5"/>
+                                <path d="M8 1v2M8 13v2M1 8h2M13 8h2M2.9 2.9l1.4 1.4M11.7 11.7l1.4 1.4M13.1 2.9l-1.4 1.4M4.3 11.7l-1.4 1.4"/>
+                            </svg>
+                        </button>
+                    </header>
+                    <!-- Empty state -->
+                    <div id="empty-state">
+                        <div class="empty-state-content">
+                            <div class="empty-ascii">  ╭───────╮
+ ╱  ●   ●  ╲
+│     ◡     │
+ ╲           ╱
+  ╰─────────╯</div>
+                            <div class="empty-prompt">What can I help you with?</div>
+                        </div>
+                    </div>
+                    <!-- Messages -->
+                    <div id="messages"></div>
+                    <!-- Thinking indicator -->
+                    <div id="thinking" class="thinking-indicator" style="display:none">
+                        <span class="spinner-icon">
+                            <svg width="16" height="16" viewBox="0 0 16 16">
+                                <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor"
+                                    stroke-width="1.5" stroke-dasharray="28" stroke-dashoffset="8">
+                                    <animateTransform attributeName="transform" type="rotate"
+                                        from="0 8 8" to="360 8 8" dur="0.8s" repeatCount="indefinite"/>
+                                </circle>
+                            </svg>
+                        </span>
+                        <span class="spinner-text">Generating…</span>
+                    </div>
+                    <!-- Gradient overlay -->
+                    <div class="message-gradient"></div>
+                    <!-- Input area -->
+                    <div id="input-area">
+                        <div class="input-wrapper">
+                            <div id="slash-dropdown" class="slash-dropdown"></div>
+                            <div class="input-box" id="input-box">
+                                <div class="input-box-bg"></div>
+                                <div class="message-input-container">
+                                    <div id="message-input"
+                                         contenteditable="true"
+                                         data-placeholder="What can I help you with?"
+                                         role="textbox"></div>
+                                </div>
+                                <div class="input-footer">
+                                    <button class="footer-btn" id="permission-mode-btn">
+                                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <path d="M8 1L2 4v4c0 3.3 2.6 6.4 6 7 3.4-.6 6-3.7 6-7V4L8 1z"/>
+                                        </svg>
+                                        <span id="permission-mode-label">Default</span>
+                                    </button>
+                                    <button class="footer-btn" id="model-btn">
+                                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <rect x="2" y="2" width="12" height="12" rx="2"/>
+                                            <path d="M5 8h6M8 5v6"/>
+                                        </svg>
+                                        <span id="model-label">Default</span>
+                                    </button>
+                                    <button class="footer-btn" id="thinking-btn">
+                                        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                            <circle cx="8" cy="6" r="4"/>
+                                            <path d="M5.5 10c-.5 1-.5 2.5 0 4h5c.5-1.5.5-3 0-4"/>
+                                            <path d="M6 12h4"/>
+                                        </svg>
+                                        <span id="thinking-label">Auto</span>
+                                    </button>
+                                    <div class="footer-spacer"></div>
+                                    <span class="footer-btn" id="cost-label">${'$'}0.00</span>
+                                    <button id="send-btn" disabled>
+                                        <svg viewBox="0 0 16 16" fill="currentColor">
+                                            <path d="M3 13V3l10 5L3 13z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <script>$markedJs</script>
                 <script>$highlightJs</script>
                 <script>$chatJs</script>
+                <script>
+                _initSlashCommands('${slashCommandsJson.replace("'", "\\'")}');
+                _initPage();
+                </script>
             </body>
             </html>
         """.trimIndent()
@@ -431,6 +590,14 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
             put("--app-transparent-inner-border", if (isDark) "rgba(255,255,255,0.1)" else "rgba(0,0,0,0.07)")
             put("--app-ghost-button-hover-background", resolveColor("ActionButton.hoverBackground", isDark, "#4c5052", "#dfdfdf"))
             put("--app-menu-background", resolveColor("PopupMenu.background", isDark, "#2b2d30", "#f5f5f5"))
+            // VS Code parity vars
+            put("--app-claude-clay-button-orange", if (isDark) "#d97757" else "#c6613f")
+            put("--app-claude-ivory", "#faf9f5")
+            put("--app-input-secondary-background", resolveColor("PopupMenu.background", isDark, "#2b2d30", "#f5f5f5"))
+            put("--app-header-background", resolveColor("SidePanel.background", isDark, "#2b2d30", "#f5f5f5"))
+            put("--app-list-hover-background", resolveColor("ActionButton.hoverBackground", isDark, "#4c5052", "#dfdfdf"))
+            put("--app-list-active-background", resolveColor("Button.default.startBackground", isDark, "#365880", "#528bff"))
+            put("--app-progressbar-background", "#74c991")
             // Scrollbar
             put("--scrollbar-thumb", if (isDark) "#555759" else "#c1c1c1")
             // Monospace font
@@ -502,7 +669,6 @@ class MessageList(private val project: Project, parentDisposable: Disposable) : 
     }
 
     companion object {
-        private const val CARD_EMPTY = "empty"
         private const val CARD_MESSAGES = "messages"
     }
 }

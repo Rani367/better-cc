@@ -1,9 +1,13 @@
 package com.claudecode.jetbrains.ui.chat
 
 import com.claudecode.jetbrains.context.SelectionContext
+import com.claudecode.jetbrains.services.ClaudeStateListener
+import com.claudecode.jetbrains.services.ClaudeStateService
+import com.claudecode.jetbrains.services.SessionUsage
 import com.claudecode.jetbrains.settings.ClaudeSettings
 import com.claudecode.jetbrains.settings.ClaudeSettingsChangeListener
 import com.claudecode.jetbrains.settings.PermissionMode
+import com.claudecode.jetbrains.settings.ThinkingMode
 import com.claudecode.jetbrains.ui.commands.FileMentionEntry
 import com.claudecode.jetbrains.ui.commands.FileMentionPicker
 import com.claudecode.jetbrains.ui.commands.SlashCommand
@@ -14,6 +18,7 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -46,11 +51,12 @@ import javax.swing.event.DocumentListener
 class InputPanel(
     private val project: Project,
     private val onSend: (String) -> Unit
-) : JPanel(BorderLayout()), Disposable {
+) : JPanel(BorderLayout()), Disposable, ClaudeStateListener {
 
     private var sendingInProgress = false
     private var onSlashCommand: ((SlashCommand) -> Unit)? = null
     private var inputFocused = false
+    private val stateService = ClaudeStateService.getInstance(project)
 
     private val textArea = JBTextArea(2, 0).apply {
         lineWrap = true
@@ -131,6 +137,43 @@ class InputPanel(
 
     private var onSelectionToggle: ((Boolean) -> Unit)? = null
 
+    // Model indicator — clickable label
+    private val modelLabel = JBLabel(
+        modelDisplayText(ClaudeSettings.getInstance().selectedModel)
+    ).apply {
+        foreground = JBColor.GRAY
+        font = font.deriveFont(font.size2D * 0.9f)
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = "Click to change model"
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) {
+                showModelPicker()
+            }
+        })
+    }
+
+    // Thinking level indicator — clickable label
+    private val thinkingLabel = JBLabel(
+        ClaudeSettings.getInstance().thinkingMode.displayName
+    ).apply {
+        foreground = JBColor.GRAY
+        font = font.deriveFont(font.size2D * 0.9f)
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = "Click to change thinking mode"
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) {
+                showThinkingPicker()
+            }
+        })
+    }
+
+    // Cost display label
+    private val costLabel = JBLabel("$0.00").apply {
+        foreground = JBColor.GRAY
+        font = font.deriveFont(font.size2D * 0.9f)
+        toolTipText = "Session cost"
+    }
+
     private val permissionModeCombo = ComboBox(
         DefaultComboBoxModel(PermissionMode.entries.toTypedArray())
     ).apply {
@@ -191,7 +234,7 @@ class InputPanel(
             }
         })
 
-        // Footer bar: permission mode + spacer + send button (inputFooter_gGYT1w)
+        // Footer bar: [PermMode] [Model] [Thinking] ── [$cost] [Send]
         val footerBar = JPanel(BorderLayout()).apply {
             isOpaque = false
             border = BorderFactory.createCompoundBorder(
@@ -200,13 +243,20 @@ class InputPanel(
                 JBUI.Borders.empty(5)
             )
 
-            val leftFooter = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(4), 0)).apply {
+            val leftFooter = JPanel(FlowLayout(FlowLayout.LEFT, JBUI.scale(6), 0)).apply {
                 isOpaque = false
                 add(permissionModeCombo)
+                add(modelLabel)
+                add(thinkingLabel)
                 add(selectionPanel)
             }
+            val rightFooter = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(6), 0)).apply {
+                isOpaque = false
+                add(costLabel)
+                add(sendButton)
+            }
             add(leftFooter, BorderLayout.CENTER)
-            add(sendButton, BorderLayout.EAST)
+            add(rightFooter, BorderLayout.EAST)
         }
 
         // Main input container with rounded border (inputContainer_cKsPxg)
@@ -318,13 +368,103 @@ class InputPanel(
                 object : ClaudeSettingsChangeListener {
                     override fun settingsChanged(settings: ClaudeSettings) {
                         setupKeyBindings()
+                        modelLabel.text = modelDisplayText(
+                            settings.selectedModel
+                        )
+                        thinkingLabel.text = settings.thinkingMode
+                            .displayName
                     }
                 }
             )
+
+        // Subscribe to state changes for live cost updates
+        stateService.addListener(this)
+        onUsageUpdated(stateService.usage)
     }
 
     override fun dispose() {
+        stateService.removeListener(this)
         // MessageBus connection is auto-disposed via parent Disposable
+    }
+
+    // ── ClaudeStateListener ──────────────────────────────────────
+
+    override fun onUsageUpdated(usage: SessionUsage) {
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) {
+                costLabel.text = usage.formatCost()
+                costLabel.toolTipText = buildString {
+                    append("Input: ${usage.totalInputTokens} tokens\n")
+                    append("Output: ${usage.totalOutputTokens} tokens\n")
+                    append("Total: ${usage.formatCost()}")
+                }
+            }
+        }
+    }
+
+    override fun onModelChanged(model: String) {
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) {
+                modelLabel.text = modelDisplayText(model)
+            }
+        }
+    }
+
+    // ── Model/thinking pickers ───────────────────────────────────
+
+    private fun modelDisplayText(model: String): String {
+        return when {
+            model.isBlank() -> "Default"
+            model == "sonnet" -> "Sonnet"
+            model == "opus" -> "Opus"
+            model == "haiku" -> "Haiku"
+            else -> model
+        }
+    }
+
+    private fun showModelPicker() {
+        val options = listOf("Default", "sonnet", "opus", "haiku")
+        val popup = JBPopupFactory.getInstance()
+            .createPopupChooserBuilder(options)
+            .setTitle("Select Model")
+            .setItemChosenCallback { selected ->
+                val modelValue =
+                    if (selected == "Default") "" else selected
+                ClaudeSettings.getInstance().selectedModel = modelValue
+                stateService.setActiveModel(modelValue)
+                modelLabel.text = modelDisplayText(modelValue)
+            }
+            .createPopup()
+        popup.showUnderneathOf(modelLabel)
+    }
+
+    private fun showThinkingPicker() {
+        val options = ThinkingMode.entries.toList()
+        val popup = JBPopupFactory.getInstance()
+            .createPopupChooserBuilder(options)
+            .setTitle("Thinking Mode")
+            .setRenderer(object : javax.swing.DefaultListCellRenderer() {
+                override fun getListCellRendererComponent(
+                    list: javax.swing.JList<*>?,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean
+                ): java.awt.Component {
+                    super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus
+                    )
+                    text = (value as? ThinkingMode)?.displayName
+                        ?: value.toString()
+                    return this
+                }
+            })
+            .setItemChosenCallback { selected ->
+                ClaudeSettings.getInstance().thinkingMode = selected
+                thinkingLabel.text = selected.displayName
+            }
+            .createPopup()
+        popup.showUnderneathOf(thinkingLabel)
     }
 
     private fun returnFocusToEditor() {

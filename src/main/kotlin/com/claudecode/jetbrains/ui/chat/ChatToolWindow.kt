@@ -17,31 +17,35 @@ import com.claudecode.jetbrains.cli.SessionManager
 import com.claudecode.jetbrains.cli.StreamEventWrapper
 import com.claudecode.jetbrains.cli.SystemEvent
 import com.claudecode.jetbrains.cli.TextDelta
+import com.claudecode.jetbrains.cli.ThinkingBlock
+import com.claudecode.jetbrains.cli.ThinkingDelta
 import com.claudecode.jetbrains.cli.ToolUseBlock
-import com.claudecode.jetbrains.context.SelectionContextProvider
 import com.claudecode.jetbrains.services.ClaudeState
+import com.claudecode.jetbrains.services.ClaudeStateListener
 import com.claudecode.jetbrains.services.ClaudeStateService
+import com.claudecode.jetbrains.services.SessionUsage
 import com.claudecode.jetbrains.settings.ClaudeSettings
+import com.claudecode.jetbrains.settings.ClaudeSettingsChangeListener
+import com.claudecode.jetbrains.settings.PermissionMode
+import com.claudecode.jetbrains.settings.ThinkingMode
 import com.claudecode.jetbrains.ui.commands.SlashCommand
+import com.claudecode.jetbrains.ui.commands.SlashCommandRegistry
 import com.claudecode.jetbrains.ui.mcp.McpManagerDialog
 import com.claudecode.jetbrains.ui.plugins.PluginManagerDialog
 import com.claudecode.jetbrains.ui.diff.DiffDecision
 import com.claudecode.jetbrains.ui.diff.DiffPreviewPanel
 import com.claudecode.jetbrains.ui.diff.DiffViewerDialog
-import com.claudecode.jetbrains.ui.onboarding.OnboardingPanel
+
 import com.claudecode.jetbrains.ui.sessions.ClaudeVirtualFile
 import com.claudecode.jetbrains.ui.sessions.SessionHistoryPanel
-import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
-import com.intellij.ui.JBColor
-import com.intellij.ui.components.JBLabel
-import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -50,15 +54,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import java.awt.BorderLayout
-import java.awt.Cursor
-import java.awt.FlowLayout
-import java.awt.Font
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import java.util.concurrent.atomic.AtomicReference
-import javax.swing.BorderFactory
-import javax.swing.BoxLayout
-import javax.swing.JButton
+
+import javax.swing.JOptionPane
 import javax.swing.JPanel
 
 class ChatToolWindow(private val project: Project) : Disposable {
@@ -68,105 +66,10 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     private val stateService = ClaudeStateService.getInstance(project)
     private val messageList = MessageList(project, this)
-    private val inputPanel = InputPanel(project, ::sendMessage).also {
-        Disposer.register(this, it)
-    }
-    private val toolbarPanel = ToolbarPanel(project, this)
-    private val contextIndicator = ContextIndicator(project, this)
-    private val selectionContextProvider =
-        SelectionContextProvider(project, this)
-
-    // ── Session header bar (header_aqhumA) ──────────────────────
-    private val sessionTitleLabel = JBLabel("New Conversation").apply {
-        font = font.deriveFont(Font.BOLD, 13f)
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        toolTipText = "Click to browse past conversations"
-        maximumSize = java.awt.Dimension(JBUI.scale(300), Short.MAX_VALUE.toInt())
-    }
-
-    private val sessionChevron = JBLabel("\u25BE").apply {
-        foreground = JBColor.namedColor("Label.disabledForeground", JBColor.GRAY)
-        border = JBUI.Borders.emptyLeft(2)
-    }
-
-    private val resumedIndicator = JBLabel("Resumed").apply {
-        font = font.deriveFont(Font.ITALIC, 11f)
-        foreground = JBColor.namedColor(
-            "Label.disabledForeground",
-            JBColor.GRAY
-        )
-        isVisible = false
-        border = JBUI.Borders.emptyLeft(6)
-    }
-
-    private val newConversationButton = JButton(AllIcons.General.Add).apply {
-        toolTipText = "New Conversation"
-        isBorderPainted = false
-        isContentAreaFilled = false
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        addActionListener { startNewConversation() }
-    }
-
-    private val settingsButton = JButton(AllIcons.General.Settings).apply {
-        toolTipText = "Settings"
-        isBorderPainted = false
-        isContentAreaFilled = false
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        addActionListener {
-            com.intellij.openapi.options.ShowSettingsUtil.getInstance()
-                .showSettingsDialog(project, "Claude Code")
-        }
-    }
-
-    private val headerPanel = JPanel(BorderLayout()).apply {
-        border = BorderFactory.createCompoundBorder(
-            BorderFactory.createMatteBorder(0, 0, 1, 0, JBColor.border()),
-            JBUI.Borders.empty(6, 10, 6, 6)
-        )
-        // Left: session button (ghost button style)
-        val sessionButton = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-            isOpaque = false
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            add(sessionTitleLabel)
-            add(sessionChevron)
-            add(resumedIndicator)
-        }
-        add(sessionButton, BorderLayout.CENTER)
-        // Right: action buttons
-        val rightButtons = JPanel(FlowLayout(FlowLayout.RIGHT, JBUI.scale(2), 0)).apply {
-            isOpaque = false
-            add(newConversationButton)
-            add(settingsButton)
-        }
-        add(rightButtons, BorderLayout.EAST)
-    }
-
-    // Onboarding panel (shown to first-time users)
-    private var onboardingPanel: OnboardingPanel? = null
 
     private val rootPanel = JPanel(BorderLayout()).apply {
-        val topPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            add(headerPanel)
-            add(toolbarPanel)
-            // Show onboarding if not dismissed
-            if (!ClaudeSettings.getInstance().hideOnboarding) {
-                val panel = OnboardingPanel(project) {
-                    removeOnboarding()
-                }
-                onboardingPanel = panel
-                add(panel)
-            }
-        }
-        add(topPanel, BorderLayout.NORTH)
+        // The JCEF browser fills the entire panel (header + messages + input are all in JCEF)
         add(messageList, BorderLayout.CENTER)
-        // South panel: context indicator + input panel
-        val southPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            add(contextIndicator)
-            add(inputPanel)
-        }
-        add(southPanel, BorderLayout.SOUTH)
     }
 
     // Process management
@@ -186,6 +89,11 @@ class ChatToolWindow(private val project: Project) : Disposable {
     // Tool use tracking
     private val activeToolUses = mutableMapOf<Int, ToolUseState>()
     private val pendingToolUpdate = AtomicReference<ToolUseState?>(null)
+
+    // Thinking block tracking
+    private val activeThinkingBlocks = mutableMapOf<Int, ThinkingState>()
+    private val pendingThinkingUpdate =
+        AtomicReference<ThinkingState?>(null)
 
     // Permission system
     private var permissionServer: PermissionMcpServer? = null
@@ -209,32 +117,85 @@ class ChatToolWindow(private val project: Project) : Disposable {
             handlePermissionResponse(requestId, decision)
         }
 
-        // Wire slash command handler
-        inputPanel.setSlashCommandHandler(::handleSlashCommand)
-
         // Wire rewind handler
         messageList.setRewindHandler { messageId, action ->
             handleRewind(messageId, action)
         }
 
-        // Wire selection context
-        selectionContextProvider.setOnChangeListener { context ->
+        // Wire retry handler (from hover actions)
+        messageList.setRetryHandler { _ ->
+            val lastUserMsg = conversationMessages
+                .lastOrNull { it.sender == MessageSender.USER }
+            if (lastUserMsg != null) {
+                sendMessage(lastUserMsg.text)
+            }
+        }
+
+        // Wire fork handler (from hover actions)
+        messageList.setForkHandler { _ ->
+            val lastUserMsg = conversationMessages
+                .lastOrNull { it.sender == MessageSender.USER }
+            startNewConversation()
+            if (lastUserMsg != null) {
+                sendMessage(lastUserMsg.text)
+            }
+        }
+
+        // Wire send message handler (from JCEF input)
+        messageList.setSendMessageHandler { text ->
             ApplicationManager.getApplication().invokeLater {
                 if (!project.isDisposed) {
-                    inputPanel.updateSelectionContext(context)
+                    sendMessage(text)
                 }
             }
         }
-        inputPanel.setSelectionToggleHandler { visible ->
-            selectionContextProvider.isSelectionVisible = visible
-        }
 
-        // Session history dropdown trigger
-        sessionTitleLabel.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent?) {
+        // Wire header handlers (from JCEF)
+        messageList.setNewConversationHandler {
+            ApplicationManager.getApplication().invokeLater {
+                startNewConversation()
+            }
+        }
+        messageList.setSessionsClickHandler {
+            ApplicationManager.getApplication().invokeLater {
                 showSessionHistory()
             }
-        })
+        }
+        messageList.setSettingsHandler {
+            ApplicationManager.getApplication().invokeLater {
+                openSettings()
+            }
+        }
+
+        // Wire slash command handler (from JCEF input)
+        messageList.setSlashCommandHandler { commandName ->
+            ApplicationManager.getApplication().invokeLater {
+                val command = SlashCommandRegistry.ALL_COMMANDS
+                    .find { it.name == commandName }
+                if (command != null) {
+                    handleSlashCommand(command)
+                } else {
+                    sendMessage(commandName)
+                }
+            }
+        }
+
+        // Wire footer button handlers
+        messageList.setModelClickHandler {
+            ApplicationManager.getApplication().invokeLater {
+                showModelPicker()
+            }
+        }
+        messageList.setPermissionModeClickHandler {
+            ApplicationManager.getApplication().invokeLater {
+                showPermissionModePicker()
+            }
+        }
+        messageList.setThinkingClickHandler {
+            ApplicationManager.getApplication().invokeLater {
+                showThinkingPicker()
+            }
+        }
 
         // Listen for theme changes
         ApplicationManager.getApplication().messageBus
@@ -242,36 +203,86 @@ class ChatToolWindow(private val project: Project) : Disposable {
             .subscribe(LafManagerListener.TOPIC, LafManagerListener {
                 messageList.applyTheme()
             })
+
+        // Listen for settings changes to update footer labels
+        ApplicationManager.getApplication().messageBus
+            .connect(this)
+            .subscribe(
+                ClaudeSettings.SETTINGS_CHANGED,
+                object : ClaudeSettingsChangeListener {
+                    override fun settingsChanged(settings: ClaudeSettings) {
+                        messageList.setModelLabel(
+                            modelDisplayText(settings.selectedModel)
+                        )
+                        messageList.setThinkingLabel(
+                            settings.thinkingMode.displayName
+                        )
+                        messageList.setPermissionModeLabel(
+                            settings.permissionMode.displayName
+                        )
+                    }
+                }
+            )
+
+        // Listen for state changes to update status dot (via JCEF)
+        stateService.addListener(object : ClaudeStateListener {
+            override fun onStateChanged(state: ClaudeState) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (project.isDisposed) return@invokeLater
+                    val dotState = when (state) {
+                        ClaudeState.READY -> "ready"
+                        ClaudeState.THINKING -> "thinking"
+                        ClaudeState.WAITING_FOR_PERMISSION -> "waiting"
+                    }
+                    messageList.setStatusDot(dotState)
+                }
+            }
+
+            override fun onUsageUpdated(usage: SessionUsage) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) {
+                        messageList.setCostLabel(usage.formatCost())
+                    }
+                }
+            }
+
+            override fun onModelChanged(model: String) {
+                ApplicationManager.getApplication().invokeLater {
+                    if (!project.isDisposed) {
+                        messageList.setModelLabel(modelDisplayText(model))
+                    }
+                }
+            }
+        })
+
+        // Set initial footer labels
+        val settings = ClaudeSettings.getInstance()
+        messageList.setModelLabel(modelDisplayText(settings.selectedModel))
+        messageList.setThinkingLabel(settings.thinkingMode.displayName)
+        messageList.setPermissionModeLabel(settings.permissionMode.displayName)
     }
 
     fun getContent(): JPanel = rootPanel
 
-    private fun removeOnboarding() {
-        val panel = onboardingPanel ?: return
-        onboardingPanel = null
-        panel.parent?.remove(panel)
-        rootPanel.revalidate()
-        rootPanel.repaint()
-    }
 
     fun focusInput() {
-        inputPanel.focus()
+        messageList.focusInput()
     }
 
     /**
-     * Inserts text at the current cursor position in the input panel.
+     * Inserts text at the current cursor position in the input.
      * Used by InsertFileRefAction to inject @file references.
      */
     fun insertTextAtCursor(text: String) {
-        inputPanel.insertTextAtCursor(text)
+        messageList.insertTextAtCursor(text)
     }
 
     /**
-     * Set text in the input panel without sending.
+     * Set text in the input without sending.
      */
     fun prefillInput(text: String) {
-        inputPanel.setText(text)
-        inputPanel.focus()
+        messageList.setInputText(text)
+        messageList.focusInput()
     }
 
     /**
@@ -300,7 +311,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
             onNewConversation = { startNewConversation() },
             onResumeSession = { session -> resumeSession(session) }
         )
-        panel.show(sessionTitleLabel)
+        panel.show(rootPanel)
     }
 
     /**
@@ -317,10 +328,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
             messageList.clearMessages()
-            sessionTitleLabel.text = "New Conversation"
-            resumedIndicator.isVisible = false
-            inputPanel.setInputEnabled(true)
-            inputPanel.focus()
+            messageList.setSessionTitle("New Conversation")
+            messageList.setInputEnabled(true)
+            messageList.focusInput()
         }
     }
 
@@ -335,8 +345,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
             messageList.clearMessages()
-            sessionTitleLabel.text = session.displayTitle()
-            resumedIndicator.isVisible = true
+            messageList.setSessionTitle(session.displayTitle())
 
             messageList.addMessage(
                 ChatMessage(
@@ -345,8 +354,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 )
             )
 
-            inputPanel.setInputEnabled(true)
-            inputPanel.focus()
+            messageList.setInputEnabled(true)
+            messageList.focusInput()
         }
     }
 
@@ -356,7 +365,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
             .getSession(sessionId) ?: return
         ApplicationManager.getApplication().invokeLater {
             if (!project.isDisposed) {
-                sessionTitleLabel.text = session.displayTitle()
+                messageList.setSessionTitle(session.displayTitle())
             }
         }
     }
@@ -393,6 +402,104 @@ class ChatToolWindow(private val project: Project) : Disposable {
             .showSettingsDialog(project, "Claude Code")
     }
 
+    private fun modelDisplayText(model: String): String {
+        return when {
+            model.isBlank() -> "Default"
+            model == "sonnet" -> "Sonnet"
+            model == "opus" -> "Opus"
+            model == "haiku" -> "Haiku"
+            else -> model
+        }
+    }
+
+    private fun showModelPicker() {
+        val options = listOf("Default", "sonnet", "opus", "haiku")
+        val popup = JBPopupFactory.getInstance()
+            .createPopupChooserBuilder(options)
+            .setTitle("Select Model")
+            .setItemChosenCallback { selected ->
+                val modelValue =
+                    if (selected == "Default") "" else selected
+                ClaudeSettings.getInstance().selectedModel = modelValue
+                stateService.setActiveModel(modelValue)
+                messageList.setModelLabel(modelDisplayText(modelValue))
+            }
+            .createPopup()
+        popup.showInCenterOf(rootPanel)
+    }
+
+    private fun showPermissionModePicker() {
+        val options = PermissionMode.entries.toList()
+        val popup = JBPopupFactory.getInstance()
+            .createPopupChooserBuilder(options)
+            .setTitle("Permission Mode")
+            .setRenderer(object : javax.swing.DefaultListCellRenderer() {
+                override fun getListCellRendererComponent(
+                    list: javax.swing.JList<*>?,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean
+                ): java.awt.Component {
+                    super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus
+                    )
+                    text = (value as? PermissionMode)?.displayName
+                        ?: value.toString()
+                    return this
+                }
+            })
+            .setItemChosenCallback { selected ->
+                if (selected == PermissionMode.BYPASS) {
+                    val settings = ClaudeSettings.getInstance()
+                    if (!settings.allowDangerouslySkipPermissions) {
+                        JOptionPane.showMessageDialog(
+                            rootPanel,
+                            "Bypass mode is not enabled.\n" +
+                                "Enable 'allowDangerouslySkipPermissions' " +
+                                "in settings first.",
+                            "Bypass Not Allowed",
+                            JOptionPane.WARNING_MESSAGE
+                        )
+                        return@setItemChosenCallback
+                    }
+                }
+                ClaudeSettings.getInstance().permissionMode = selected
+                messageList.setPermissionModeLabel(selected.displayName)
+            }
+            .createPopup()
+        popup.showInCenterOf(rootPanel)
+    }
+
+    private fun showThinkingPicker() {
+        val options = ThinkingMode.entries.toList()
+        val popup = JBPopupFactory.getInstance()
+            .createPopupChooserBuilder(options)
+            .setTitle("Thinking Mode")
+            .setRenderer(object : javax.swing.DefaultListCellRenderer() {
+                override fun getListCellRendererComponent(
+                    list: javax.swing.JList<*>?,
+                    value: Any?,
+                    index: Int,
+                    isSelected: Boolean,
+                    cellHasFocus: Boolean
+                ): java.awt.Component {
+                    super.getListCellRendererComponent(
+                        list, value, index, isSelected, cellHasFocus
+                    )
+                    text = (value as? ThinkingMode)?.displayName
+                        ?: value.toString()
+                    return this
+                }
+            })
+            .setItemChosenCallback { selected ->
+                ClaudeSettings.getInstance().thinkingMode = selected
+                messageList.setThinkingLabel(selected.displayName)
+            }
+            .createPopup()
+        popup.showInCenterOf(rootPanel)
+    }
+
     private fun sendMessage(text: String) {
         val msgIndex = messageIndexCounter++
         val userMessage = ChatMessage(
@@ -400,7 +507,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         )
         conversationMessages.add(userMessage)
         messageList.addMessage(userMessage)
-        inputPanel.setInputEnabled(false)
+        messageList.setInputEnabled(false)
         messageList.showThinking(true)
         stateService.setState(ClaudeState.THINKING)
 
@@ -637,6 +744,28 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         messageList.showThinking(false)
                         messageList.addToolBlock(tool)
                     }
+                } else if (block is ThinkingBlock) {
+                    val thinkingId = "thinking-${inner.index}-${System.currentTimeMillis()}"
+                    val thinking = ThinkingState(
+                        id = thinkingId,
+                        index = inner.index
+                    )
+                    if (block.thinking.isNotEmpty()) {
+                        thinking.accumulatedText.append(block.thinking)
+                    }
+                    activeThinkingBlocks[inner.index] = thinking
+
+                    ApplicationManager.getApplication().invokeLater {
+                        if (project.isDisposed) return@invokeLater
+                        messageList.showThinking(false)
+                        messageList.addThinkingBlock(thinkingId)
+                        if (thinking.accumulatedText.isNotEmpty()) {
+                            messageList.updateThinkingBlock(
+                                thinkingId,
+                                thinking.accumulatedText.toString()
+                            )
+                        }
+                    }
                 }
             }
 
@@ -684,11 +813,41 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         }
                     }
 
+                    is ThinkingDelta -> {
+                        val thinking =
+                            activeThinkingBlocks[inner.index]
+                        if (thinking != null) {
+                            thinking.accumulatedText.append(
+                                delta.thinking
+                            )
+                            scheduleThinkingUpdate(thinking)
+                        }
+                    }
+
                     else -> { /* ignore other deltas */ }
                 }
             }
 
             is ContentBlockStop -> {
+                // Check thinking blocks first
+                val thinking =
+                    activeThinkingBlocks.remove(inner.index)
+                if (thinking != null) {
+                    thinking.status = ThinkingStatus.COMPLETE
+                    pendingThinkingUpdate.set(null)
+                    ApplicationManager.getApplication().invokeLater {
+                        if (!project.isDisposed) {
+                            messageList.updateThinkingBlock(
+                                thinking.id,
+                                thinking.accumulatedText.toString()
+                            )
+                            messageList.finalizeThinkingBlock(
+                                thinking.id
+                            )
+                        }
+                    }
+                }
+
                 val tool = activeToolUses.remove(inner.index)
                 if (tool != null) {
                     tool.status = ToolUseStatus.COMPLETE
@@ -764,6 +923,11 @@ class ChatToolWindow(private val project: Project) : Disposable {
         activeToolUses.clear()
         pendingToolUpdate.set(null)
 
+        // Finalize any remaining thinking blocks
+        val remainingThinking = activeThinkingBlocks.values.toList()
+        activeThinkingBlocks.clear()
+        pendingThinkingUpdate.set(null)
+
         val finalText = event.content
             .filter { it.type == "text" }
             .mapNotNull { it.text }
@@ -773,6 +937,10 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
+
+            for (thinking in remainingThinking) {
+                messageList.finalizeThinkingBlock(thinking.id)
+            }
 
             for (tool in remainingTools) {
                 tool.status = ToolUseStatus.COMPLETE
@@ -797,8 +965,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
             // Update rewind badges for all user messages
             updateRewindBadges()
 
-            inputPanel.setInputEnabled(true)
-            inputPanel.focus()
+            messageList.setInputEnabled(true)
+            messageList.focusInput()
         }
     }
 
@@ -821,8 +989,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 }
                 messageList.finalizeMessage(msgId)
                 messageList.showThinking(false)
-                inputPanel.setInputEnabled(true)
-                inputPanel.focus()
+                messageList.setInputEnabled(true)
+                messageList.focusInput()
 
                 // Show crash notice if stream ended mid-message
                 // with very little content
@@ -840,7 +1008,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
             ApplicationManager.getApplication().invokeLater {
                 if (project.isDisposed) return@invokeLater
                 messageList.showThinking(false)
-                inputPanel.setInputEnabled(true)
+                messageList.setInputEnabled(true)
             }
         }
 
@@ -898,8 +1066,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 messageList.addMessage(
                     ChatMessage(MessageSender.ERROR, enrichedText)
                 )
-                inputPanel.setInputEnabled(true)
-                inputPanel.focus()
+                messageList.setInputEnabled(true)
+                messageList.focusInput()
             }
         }
     }
@@ -1050,9 +1218,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
                     // Truncate in-memory conversation
                     truncateConversation(targetMsg.messageIndex)
                     // Re-populate input with original prompt
-                    inputPanel.setText(targetMsg.text)
-                    inputPanel.setInputEnabled(true)
-                    inputPanel.focus()
+                    messageList.setInputText(targetMsg.text)
+                    messageList.setInputEnabled(true)
+                    messageList.focusInput()
                     // Show system notification
                     messageList.addMessage(
                         ChatMessage(
@@ -1070,9 +1238,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
                     // Truncate conversation, keep files as-is
                     messageList.removeMessagesFrom(messageId)
                     truncateConversation(targetMsg.messageIndex)
-                    inputPanel.setText(targetMsg.text)
-                    inputPanel.setInputEnabled(true)
-                    inputPanel.focus()
+                    messageList.setInputText(targetMsg.text)
+                    messageList.setInputEnabled(true)
+                    messageList.focusInput()
                     messageList.addMessage(
                         ChatMessage(
                             MessageSender.SYSTEM,
@@ -1116,8 +1284,8 @@ class ChatToolWindow(private val project: Project) : Disposable {
                             messageIndex = messageIndexCounter++
                         )
                     )
-                    inputPanel.setInputEnabled(true)
-                    inputPanel.focus()
+                    messageList.setInputEnabled(true)
+                    messageList.focusInput()
                 }
             }
         }
@@ -1199,14 +1367,40 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     override fun dispose() {
         project.putUserData(KEY, null)
-        toolbarPanel.dispose()
-        contextIndicator.dispose()
         destroyProcess()
         scope.cancel()
+    }
+
+    private fun scheduleThinkingUpdate(thinking: ThinkingState) {
+        pendingThinkingUpdate.set(thinking)
+        ApplicationManager.getApplication().invokeLater {
+            val update = pendingThinkingUpdate.getAndSet(null)
+                ?: return@invokeLater
+            if (!project.isDisposed) {
+                messageList.updateThinkingBlock(
+                    update.id, update.accumulatedText.toString()
+                )
+            }
+        }
     }
 
     companion object {
         val KEY: Key<ChatToolWindow> =
             Key.create("ClaudeCode.ChatToolWindow")
     }
+}
+
+/**
+ * Tracks the state of an active thinking block during streaming.
+ */
+data class ThinkingState(
+    val id: String,
+    val index: Int,
+    val accumulatedText: StringBuilder = StringBuilder(),
+    var status: ThinkingStatus = ThinkingStatus.STREAMING
+)
+
+enum class ThinkingStatus {
+    STREAMING,
+    COMPLETE
 }

@@ -22,6 +22,18 @@ class CodeBlockRenderer(
 
     var permissionResponseHandler: ((String, String) -> Unit)? = null
     var rewindHandler: ((String, String) -> Unit)? = null
+    var retryHandler: ((String) -> Unit)? = null
+    var forkHandler: ((String) -> Unit)? = null
+
+    // Header/input action handlers
+    var sendMessageHandler: ((String) -> Unit)? = null
+    var newConversationHandler: (() -> Unit)? = null
+    var sessionsClickHandler: (() -> Unit)? = null
+    var settingsHandler: (() -> Unit)? = null
+    var slashCommandHandler: ((String) -> Unit)? = null
+    var modelClickHandler: (() -> Unit)? = null
+    var permissionModeClickHandler: (() -> Unit)? = null
+    var thinkingClickHandler: (() -> Unit)? = null
 
     /**
      * JavaScript code that defines window.sendToKotlin function.
@@ -61,6 +73,40 @@ class CodeBlockRenderer(
                     val messageId = json.get("messageId")?.asString ?: return
                     val rewindAction = json.get("rewindAction")?.asString ?: return
                     rewindHandler?.invoke(messageId, rewindAction)
+                }
+                "retryMessage" -> {
+                    val messageId = json.get("messageId")?.asString ?: return
+                    retryHandler?.invoke(messageId)
+                }
+                "forkMessage" -> {
+                    val messageId = json.get("messageId")?.asString ?: return
+                    forkHandler?.invoke(messageId)
+                }
+                "sendMessage" -> {
+                    val text = json.get("text")?.asString ?: return
+                    sendMessageHandler?.invoke(text)
+                }
+                "newConversation" -> {
+                    newConversationHandler?.invoke()
+                }
+                "sessionsClick" -> {
+                    sessionsClickHandler?.invoke()
+                }
+                "settings" -> {
+                    settingsHandler?.invoke()
+                }
+                "slashCommand" -> {
+                    val command = json.get("command")?.asString ?: return
+                    slashCommandHandler?.invoke(command)
+                }
+                "modelClick" -> {
+                    modelClickHandler?.invoke()
+                }
+                "permissionModeClick" -> {
+                    permissionModeClickHandler?.invoke()
+                }
+                "thinkingClick" -> {
+                    thinkingClickHandler?.invoke()
                 }
             }
         } catch (e: Exception) {
