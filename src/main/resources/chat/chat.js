@@ -152,18 +152,20 @@ function addMessage(id, sender, content) {
     scrollToBottom();
 }
 
-// ── Streaming animation state ────────────────────────────────────
+// ── Streaming state (kept for cleanup compatibility) ─────────────
 var _streamAnim = {};
 
 /**
  * Update a streaming assistant message with cumulative markdown text.
- * Text is revealed at a constant rate via requestAnimationFrame,
- * decoupling bursty network data from smooth visual display.
+ * ChatGPT-style: text appears instantly as it arrives, new block
+ * elements (paragraphs, code blocks, etc.) fade in with animation.
+ * Uses DOM morphing to preserve existing elements and only animate new ones.
  */
 function updateStreamingMessage(id, markdown) {
     showEmptyState(false);
-    var state = _streamAnim[id];
-    if (!state) {
+    var msg = document.getElementById('msg-' + id);
+
+    if (!msg) {
         // Create the message div — timeline layout
         var container = document.getElementById('messages');
         var div = document.createElement('div');
@@ -173,59 +175,84 @@ function updateStreamingMessage(id, markdown) {
         div.innerHTML = '<div class="message-content"></div>';
         container.appendChild(div);
         updateTimelineClasses();
-
-        state = { target: '', revealed: 0, raf: null };
-        _streamAnim[id] = state;
+        msg = div;
     }
 
-    state.target = markdown;
+    msg.setAttribute('data-raw', markdown);
+    var contentDiv = msg.querySelector('.message-content');
+    var newHtml = renderStreamingText(markdown);
 
-    // Start animation if not already running
-    if (!state.raf) {
-        state.raf = requestAnimationFrame(function() { _tickStream(id); });
-    }
+    // DOM morph: preserve existing block elements, fade in new ones
+    _morphStreamingContent(contentDiv, newHtml);
+    scrollToBottom();
 }
 
 /**
- * Animation tick: reveal a few more characters each frame at ~60fps.
+ * DOM morphing for streaming content. Instead of replacing innerHTML
+ * (which destroys and recreates all elements), this function:
+ * 1. Updates existing block elements in-place (no visual disruption)
+ * 2. Appends new block elements with a fade-in animation class
+ * 3. Removes extra elements if the structure shrinks (rare)
  */
-function _tickStream(id) {
-    var state = _streamAnim[id];
-    if (!state) return;
+function _morphStreamingContent(contentDiv, newHtml) {
+    var temp = document.createElement('div');
+    temp.innerHTML = newHtml;
 
-    var gap = state.target.length - state.revealed;
-    if (gap <= 0) {
-        // Caught up — pause animation until more text arrives
-        state.raf = null;
+    var existingCount = contentDiv.children.length;
+    var newCount = temp.children.length;
+
+    if (existingCount === 0) {
+        // First render — fade in all elements
+        while (temp.firstChild) {
+            var node = temp.firstChild;
+            if (node.nodeType === 1) node.classList.add('stream-fade-in');
+            contentDiv.appendChild(node);
+        }
         return;
     }
 
-    // Adaptive speed: ~2-10 chars/frame. Faster when further behind.
-    var step = Math.max(2, Math.min(10, Math.ceil(gap / 20)));
-    state.revealed = Math.min(state.revealed + step, state.target.length);
-
-    var msg = document.getElementById('msg-' + id);
-    if (msg) {
-        msg.setAttribute('data-raw', state.target);
-        var contentDiv = msg.querySelector('.message-content');
-        contentDiv.innerHTML = renderStreamingText(state.target.substring(0, state.revealed));
-        scrollToBottom();
+    // Update existing elements in-place (last one is usually still growing)
+    var updateEnd = Math.min(existingCount, newCount);
+    for (var i = 0; i < updateEnd; i++) {
+        var existingEl = contentDiv.children[i];
+        var newEl = temp.children[i];
+        if (existingEl && newEl && existingEl.outerHTML !== newEl.outerHTML) {
+            existingEl.innerHTML = newEl.innerHTML;
+            // Sync attributes (e.g. class changes from markdown re-parse)
+            for (var a = 0; a < newEl.attributes.length; a++) {
+                var attr = newEl.attributes[a];
+                if (existingEl.getAttribute(attr.name) !== attr.value) {
+                    existingEl.setAttribute(attr.name, attr.value);
+                }
+            }
+        }
     }
 
-    state.raf = requestAnimationFrame(function() { _tickStream(id); });
+    // Remove extra elements if structure shrunk (rare with streaming)
+    while (contentDiv.children.length > newCount) {
+        contentDiv.removeChild(contentDiv.lastElementChild);
+    }
+
+    // Collect new elements to append (snapshot to avoid live collection issues)
+    var toAppend = [];
+    for (var i = existingCount; i < newCount; i++) {
+        toAppend.push(temp.children[i]);
+    }
+
+    // Append new block elements with fade-in animation
+    for (var i = 0; i < toAppend.length; i++) {
+        var clone = toAppend[i].cloneNode(true);
+        clone.classList.add('stream-fade-in');
+        contentDiv.appendChild(clone);
+    }
 }
 
 /**
- * Finalize a streaming message — reveal any remaining text, then do
- * full markdown render with syntax highlighting and file path detection.
+ * Finalize a streaming message — do full markdown render with
+ * syntax highlighting and file path detection.
  */
 function finalizeMessage(id) {
-    // Stop animation
-    var state = _streamAnim[id];
-    if (state) {
-        if (state.raf) cancelAnimationFrame(state.raf);
-        delete _streamAnim[id];
-    }
+    delete _streamAnim[id];
 
     var msg = document.getElementById('msg-' + id);
     if (!msg) return;
@@ -236,7 +263,6 @@ function finalizeMessage(id) {
         var contentDiv = msg.querySelector('.message-content');
         contentDiv.innerHTML = renderMarkdown(rawMarkdown);
         postProcessFilePaths(contentDiv);
-        // Add hover actions if not already present
         if (!msg.querySelector('.message-hover-actions')) {
             msg.insertAdjacentHTML('beforeend', createHoverActions(id));
         }
@@ -1255,15 +1281,17 @@ function handleInputKeyDown(e) {
     }
 }
 
+/**
+ * Input is always editable now — messages are queued if Claude is busy.
+ * This function only updates visual hints (no longer disables input).
+ */
 function setInputEnabled(enabled) {
+    // Input stays editable always — no disabling contentEditable or send button.
+    // We only track the state for the placeholder hint.
     var input = document.getElementById('message-input');
-    var btn = document.getElementById('send-btn');
     if (input) {
-        input.contentEditable = enabled ? 'true' : 'false';
-        input.style.opacity = enabled ? '1' : '0.6';
-    }
-    if (btn) {
-        btn.disabled = !enabled;
+        input.setAttribute('data-placeholder',
+            enabled ? 'Type a message...' : 'Type a message... (queued until ready)');
     }
 }
 

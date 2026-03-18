@@ -13,8 +13,8 @@ import javax.swing.Icon
 import javax.swing.JButton
 
 /**
- * Ghost button matching the VS Code extension style:
- * transparent background, hover background, no border, 4px radius.
+ * Ghost button — Warm Ember design system.
+ * Transparent background, hover fill, rounded corners, elastic press.
  */
 class GhostButton(
     text: String? = null,
@@ -41,11 +41,15 @@ class GhostButton(
                 repaint()
             }
         })
+
+        AnimationManager.installElasticPress(this)
     }
 
     override fun paintComponent(g: Graphics) {
+        val g2 = g as Graphics2D
+        val savedTransform = AnimationManager.applyAnimationTransform(g2, this)
+
         if (hovered) {
-            val g2 = g as Graphics2D
             g2.setRenderingHint(
                 RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON
@@ -55,5 +59,9 @@ class GhostButton(
             g2.fillRoundRect(0, 0, width, height, r, r)
         }
         super.paintComponent(g)
+
+        if (savedTransform != null) {
+            g2.transform = savedTransform
+        }
     }
 }

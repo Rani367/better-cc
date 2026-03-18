@@ -37,6 +37,15 @@ intellijPlatform {
             sinceBuild = providers.gradleProperty("pluginSinceBuild")
         }
     }
+
+    signing {
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+    }
+
+    publishing {
+        token = providers.environmentVariable("PUBLISH_TOKEN")
+    }
 }
 
 tasks {

@@ -160,6 +160,16 @@ class ClaudeSettingsComponent {
         isSelected = true
     }
 
+    val enableIdeContextCheckbox = JBCheckBox(
+        "Include IDE context with messages"
+    ).apply {
+        toolTipText = "Automatically attach IDE diagnostics (errors, " +
+            "warnings), active file, and git status to every message " +
+            "sent to Claude. This gives Claude awareness the CLI " +
+            "alone doesn't have."
+        isSelected = true
+    }
+
     val chatFontSizeField = JBTextField().apply {
         toolTipText = "Font size for chat text (default: 13)."
         emptyText.text = "13"
@@ -298,6 +308,7 @@ class ClaudeSettingsComponent {
             enableNewConversationShortcutCheckbox
         )
         addCheckbox(formPanel, gbc, row++, usePythonEnvironmentCheckbox)
+        addCheckbox(formPanel, gbc, row++, enableIdeContextCheckbox)
 
         // Font configuration section
         gbc.gridx = 0

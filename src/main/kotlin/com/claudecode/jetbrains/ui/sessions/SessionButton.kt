@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.ui.sessions
 
+import com.claudecode.jetbrains.ui.common.AnimationManager
 import com.claudecode.jetbrains.ui.theme.ClaudeColors
 import com.claudecode.jetbrains.ui.theme.ClaudeCornerRadius
 import com.intellij.util.ui.JBUI
@@ -15,8 +16,8 @@ import javax.swing.Icon
 import javax.swing.JButton
 
 /**
- * Session button matching VS Code extension's sessionsButton_aqhumA:
- * Ghost button, truncated text with ellipsis, max-width 300px, gap 6px.
+ * Session button — Warm Ember design system.
+ * Ghost button with elastic press, truncated text, max-width 300px.
  */
 class SessionButton(
     text: String,
@@ -46,16 +47,24 @@ class SessionButton(
                 repaint()
             }
         })
+
+        AnimationManager.installElasticPress(this)
     }
 
     override fun paintComponent(g: Graphics) {
+        val g2 = g as Graphics2D
+        val savedTransform = AnimationManager.applyAnimationTransform(g2, this)
+
         if (hovered) {
-            val g2 = g as Graphics2D
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g2.color = ClaudeColors.GHOST_BUTTON_HOVER
             val r = ClaudeCornerRadius.SMALL
             g2.fillRoundRect(0, 0, width, height, r, r)
         }
         super.paintComponent(g)
+
+        if (savedTransform != null) {
+            g2.transform = savedTransform
+        }
     }
 }

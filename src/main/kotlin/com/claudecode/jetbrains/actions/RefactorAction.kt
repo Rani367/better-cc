@@ -1,5 +1,6 @@
 package com.claudecode.jetbrains.actions
 
+import com.claudecode.jetbrains.context.DiagnosticsProvider
 import com.claudecode.jetbrains.context.FileContextProvider
 import com.claudecode.jetbrains.ui.chat.ChatToolWindow
 import com.intellij.openapi.actionSystem.AnAction
@@ -36,6 +37,36 @@ class RefactorAction : AnAction() {
             appendLine("```${fileContext.language.lowercase()}")
             appendLine(selectedText)
             appendLine("```")
+
+            // Include diagnostics so Claude can fix issues while refactoring
+            val virtualFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
+            if (virtualFile != null) {
+                val diagnostics = DiagnosticsProvider
+                    .getInstance(project)
+                    .getDiagnostics(virtualFile)
+                    .filter {
+                        fileContext.selectionStartLine != null &&
+                            fileContext.selectionEndLine != null &&
+                            it.line >= fileContext.selectionStartLine &&
+                            it.line <= fileContext.selectionEndLine
+                    }
+                if (diagnostics.isNotEmpty()) {
+                    appendLine()
+                    appendLine("**IDE diagnostics in this region:**")
+                    for (diag in diagnostics) {
+                        appendLine(
+                            "- [${diag.severity}] Line ${diag.line}" +
+                                ": ${diag.message}"
+                        )
+                    }
+                    appendLine()
+                    appendLine(
+                        "Please also fix these issues as part of " +
+                            "the refactoring."
+                    )
+                }
+            }
+
             appendLine()
             appendLine(
                 "Please refactor this code to improve readability, " +

@@ -4,14 +4,36 @@
     <vendor>Claude Code Contributors</vendor>
 
     <description><![CDATA[
-        Native GUI integration for Claude Code in JetBrains IDEs.
-        Provides a chat panel, inline diffs, permission prompts, checkpointing, and session management.
+<p>A native JetBrains IDE interface for <b>Claude Code</b> — Anthropic's AI coding assistant on the command line.</p>
+
+<p>This plugin brings the full Claude Code experience into IntelliJ IDEA, WebStorm, PyCharm, and other JetBrains IDEs with a rich, native UI.</p>
+
+<h3>Features</h3>
+<ul>
+    <li><b>Chat panel</b> — Stream conversations with Claude directly in your IDE, with full Markdown rendering and syntax highlighting</li>
+    <li><b>Inline diffs</b> — Review Claude's code changes in JetBrains' native diff viewer before accepting</li>
+    <li><b>Permission system</b> — Approve or deny file edits, command execution, and other tool use</li>
+    <li><b>Session management</b> — Continue previous conversations, manage multiple sessions, and restore context</li>
+    <li><b>Checkpoints</b> — Snapshot and rewind your project state at any point during a conversation</li>
+    <li><b>Slash commands</b> — Use /init, /compact, /review, /doctor, and more directly from the chat</li>
+    <li><b>File mentions</b> — Reference files with @file syntax for precise context</li>
+    <li><b>IDE-aware context</b> — Automatically feeds IntelliJ's diagnostics (type errors, inspections, warnings) to Claude with every message — context the CLI alone cannot access</li>
+    <li><b>Fix All Errors</b> — One-click action to send all errors across open files to Claude for batch fixing</li>
+    <li><b>Editor integration</b> — Right-click to ask Claude, fix errors, refactor, generate tests, or explain code</li>
+    <li><b>MCP server support</b> — Manage Model Context Protocol servers and plugins</li>
+    <li><b>Keyboard shortcuts</b> — Cmd/Ctrl+Esc to toggle the panel, Cmd/Ctrl+Shift+Esc for a new tab</li>
+</ul>
+
+<h3>Requirements</h3>
+<ul>
+    <li><a href="https://docs.anthropic.com/en/docs/claude-code/overview">Claude Code CLI</a> must be installed and authenticated</li>
+</ul>
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="com.claudecode.jetbrains.ClaudeCodePlugin"/>
+        <backgroundPostStartupActivity implementation="com.claudecode.jetbrains.ClaudeCodePlugin"/>
         <notificationGroup id="Claude Code Notifications"
                            displayType="BALLOON"
                            toolWindowId="Claude Code"/>
@@ -29,6 +51,7 @@
         <projectService serviceImplementation="com.claudecode.jetbrains.context.GitBranchTracker"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.TerminalContextProvider"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.GitContextProvider"/>
+        <projectService serviceImplementation="com.claudecode.jetbrains.context.IdeContextAggregator"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.services.ClaudeStateService"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.ui.sessions.SessionTabManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.checkpoint.CheckpointManager"/>
@@ -62,6 +85,11 @@
                     class="com.claudecode.jetbrains.actions.OpenInNewWindowAction"
                     text="Claude Code: Open in New Window"
                     description="Open Claude Code in a separate window"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.FixAllErrorsMenu"
+                    class="com.claudecode.jetbrains.actions.FixAllErrorsAction"
+                    text="Fix All Errors"
+                    description="Send all errors across open files to Claude for fixing"
                     icon="/icons/claude.svg"/>
         </group>
         <action id="ClaudeCode.ToggleFocus"
@@ -133,6 +161,11 @@
                     class="com.claudecode.jetbrains.actions.DocumentCodeAction"
                     text="Add Documentation with Claude"
                     description="Ask Claude to add documentation comments"
+                    icon="/icons/claude.svg"/>
+            <action id="ClaudeCode.FixAllErrors"
+                    class="com.claudecode.jetbrains.actions.FixAllErrorsAction"
+                    text="Fix All Errors with Claude"
+                    description="Send all errors across open files to Claude for fixing"
                     icon="/icons/claude.svg"/>
         </group>
     </actions>

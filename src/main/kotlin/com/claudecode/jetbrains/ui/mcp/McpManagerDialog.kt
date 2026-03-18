@@ -1,8 +1,9 @@
 package com.claudecode.jetbrains.ui.mcp
 
 import com.claudecode.jetbrains.cli.ClaudeCliManager
+import com.claudecode.jetbrains.ui.common.RoundedBorder
 import com.google.gson.JsonParser
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -13,6 +14,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -231,7 +233,7 @@ class McpManagerDialog(
     private fun createServerCard(server: McpServerInfo): JPanel {
         val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(JBColor.border(), 1),
+                RoundedBorder(JBColor.border()),
                 JBUI.Borders.empty(8, 12, 8, 12)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 70)
@@ -263,8 +265,8 @@ class McpManagerDialog(
         if (!server.enabled) {
             val disabledBadge = JBLabel("Disabled").apply {
                 foreground = JBColor(
-                    java.awt.Color(180, 120, 0),
-                    java.awt.Color(200, 160, 60)
+                    Color(180, 120, 0),
+                    Color(200, 160, 60)
                 )
                 font = font.deriveFont(Font.ITALIC, font.size2D - 1f)
             }
@@ -331,19 +333,25 @@ class McpManagerDialog(
     private fun getStatusColor(status: McpServerStatus): JBColor {
         return when (status) {
             McpServerStatus.CONNECTED -> JBColor(
-                java.awt.Color(0, 150, 0),
-                java.awt.Color(80, 200, 80)
+                Color(0x6E, 0xCB, 0x8B),
+                Color(0x6E, 0xCB, 0x8B)
             )
-            McpServerStatus.DISCONNECTED -> JBColor.GRAY
+            McpServerStatus.DISCONNECTED -> JBColor(
+                Color(0x9A, 0x94, 0x90),
+                Color(0x9A, 0x94, 0x90)
+            )
             McpServerStatus.ERROR -> JBColor(
-                java.awt.Color(200, 0, 0),
-                java.awt.Color(255, 80, 80)
+                Color(0xE0, 0x6C, 0x75),
+                Color(0xE0, 0x6C, 0x75)
             )
             McpServerStatus.AUTHENTICATING -> JBColor(
-                java.awt.Color(200, 150, 0),
-                java.awt.Color(230, 200, 60)
+                Color(0xF5, 0xA6, 0x23),
+                Color(0xF5, 0xA6, 0x23)
             )
-            McpServerStatus.UNKNOWN -> JBColor.GRAY
+            McpServerStatus.UNKNOWN -> JBColor(
+                Color(0x9A, 0x94, 0x90),
+                Color(0x9A, 0x94, 0x90)
+            )
         }
     }
 
@@ -356,7 +364,7 @@ class McpManagerDialog(
 
     private fun loadServers() {
         setStatus("Loading MCP servers...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommand(listOf("mcp", "list"))
 
@@ -383,7 +391,7 @@ class McpManagerDialog(
         commandOrUrl: String
     ) {
         setStatus("Adding server '$name'...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
 
             val args = mutableListOf("mcp", "add", name)
@@ -429,7 +437,7 @@ class McpManagerDialog(
         if (confirmed != Messages.OK) return
 
         setStatus("Removing server '$name'...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("mcp", "remove", name)
@@ -449,7 +457,7 @@ class McpManagerDialog(
 
     private fun reconnectServer(name: String) {
         setStatus("Reconnecting server '$name'...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("mcp", "reconnect", name)
@@ -468,7 +476,7 @@ class McpManagerDialog(
 
     private fun authenticateServer(name: String) {
         setStatus("Authenticating server '$name'...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("mcp", "authenticate", name)
@@ -488,7 +496,7 @@ class McpManagerDialog(
     private fun toggleServerEnabled(name: String, enable: Boolean) {
         val action = if (enable) "Enabling" else "Disabling"
         setStatus("$action server '$name'...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val command = if (enable) "enable" else "disable"
             val result = cliManager.runCliCommandWithExitCode(

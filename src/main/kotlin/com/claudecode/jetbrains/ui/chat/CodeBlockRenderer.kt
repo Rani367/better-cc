@@ -11,6 +11,7 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -414,8 +415,8 @@ class CodeBlockRenderer(
     }
 
     private fun runAuthCommand(vararg args: String) {
-        ApplicationManager.getApplication().executeOnPooledThread {
-            if (project.isDisposed) return@executeOnPooledThread
+        AppExecutorUtil.getAppExecutorService().execute {
+            if (project.isDisposed) return@execute
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommand(args.toList())
             val message = if (result != null) {

@@ -80,6 +80,7 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         var editorFontFamily: String = "",
         var editorFontSize: Int = 12,
         var editorFontWeight: String = "normal",
+        var enableIdeContext: Boolean = true,
         var telemetryEnabled: Boolean = false,
         var dismissedBanners: MutableSet<String> = mutableSetOf(),
         var completedMilestones: MutableSet<String> = mutableSetOf()
@@ -218,6 +219,12 @@ class ClaudeSettings : PersistentStateComponent<ClaudeSettings.State> {
         get() = state.editorFontWeight
         set(value) {
             state.editorFontWeight = value
+        }
+
+    var enableIdeContext: Boolean
+        get() = state.enableIdeContext
+        set(value) {
+            state.enableIdeContext = value
         }
 
     var telemetryEnabled: Boolean

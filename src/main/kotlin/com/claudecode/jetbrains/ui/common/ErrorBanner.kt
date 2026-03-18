@@ -1,20 +1,22 @@
 package com.claudecode.jetbrains.ui.common
 
 import com.claudecode.jetbrains.ui.theme.ClaudeColors
+import com.claudecode.jetbrains.ui.theme.ClaudeCornerRadius
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
 
 /**
- * Error banner matching the VS Code extension's errorBanner_07S1Yg:
- * 96%/4% mix of primary-bg and error colour, 1px bottom border,
- * dismiss button at 44x44px.
+ * Error banner — Warm Ember design system.
+ * Blended background with rounded corners.
  */
 class ErrorBanner(
     private val message: String,
@@ -22,7 +24,8 @@ class ErrorBanner(
 ) : JPanel(BorderLayout()) {
 
     init {
-        border = JBUI.Borders.customLine(ClaudeColors.ERROR_FOREGROUND, 0, 0, 1, 0)
+        isOpaque = false
+        border = JBUI.Borders.empty(4)
 
         val messageLabel = JLabel(
             "<html><div style='padding:10px 12px;'>${escapeHtml(message)}</div></html>"
@@ -45,6 +48,9 @@ class ErrorBanner(
     }
 
     override fun paintComponent(g: Graphics) {
+        val g2 = g as Graphics2D
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+
         // 96% primary background + 4% error foreground
         val bg = ClaudeColors.PRIMARY_BACKGROUND
         val err = ClaudeColors.ERROR_FOREGROUND
@@ -53,8 +59,13 @@ class ErrorBanner(
             (bg.green * 0.96 + err.green * 0.04).toInt().coerceIn(0, 255),
             (bg.blue * 0.96 + err.blue * 0.04).toInt().coerceIn(0, 255)
         )
-        g.color = blended
-        g.fillRect(0, 0, width, height)
+        g2.color = blended
+        val r = ClaudeCornerRadius.MEDIUM
+        g2.fillRoundRect(0, 0, width, height, r, r)
+
+        // Bottom border line
+        g2.color = ClaudeColors.ERROR_FOREGROUND
+        g2.drawLine(0, height - 1, width, height - 1)
     }
 
     private fun escapeHtml(text: String): String {

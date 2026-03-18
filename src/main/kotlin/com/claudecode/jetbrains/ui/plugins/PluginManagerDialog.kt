@@ -1,8 +1,9 @@
 package com.claudecode.jetbrains.ui.plugins
 
 import com.claudecode.jetbrains.cli.ClaudeCliManager
+import com.claudecode.jetbrains.ui.common.RoundedBorder
 import com.google.gson.JsonParser
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
@@ -14,6 +15,7 @@ import com.intellij.ui.components.JBTabbedPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.FlowLayout
@@ -91,14 +93,14 @@ class PluginManagerDialog(
     // Restart banner
     private val restartBanner = JPanel(BorderLayout()).apply {
         background = JBColor(
-            java.awt.Color(255, 243, 205),
-            java.awt.Color(80, 70, 30)
+            Color(0xFD, 0xF0, 0xD5),
+            Color(0x4A, 0x40, 0x28)
         )
         border = BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(
+            RoundedBorder(
                 JBColor(
-                    java.awt.Color(255, 220, 130),
-                    java.awt.Color(120, 100, 40)
+                    Color(0xF5, 0xA6, 0x23),
+                    Color(0x8A, 0x6D, 0x2B)
                 )
             ),
             JBUI.Borders.empty(6, 12, 6, 12)
@@ -106,8 +108,8 @@ class PluginManagerDialog(
         add(
             JBLabel("Restart required for changes to take effect.").apply {
                 foreground = JBColor(
-                    java.awt.Color(120, 90, 0),
-                    java.awt.Color(220, 190, 100)
+                    Color(0x8A, 0x6D, 0x2B),
+                    Color(0xF5, 0xA6, 0x23)
                 )
             },
             BorderLayout.CENTER
@@ -333,7 +335,7 @@ class PluginManagerDialog(
     private fun createInstalledPluginCard(plugin: PluginInfo): JPanel {
         val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(JBColor.border(), 1),
+                RoundedBorder(JBColor.border()),
                 JBUI.Borders.empty(6, 10, 6, 10)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 50)
@@ -395,16 +397,16 @@ class PluginManagerDialog(
     private fun createScopeBadge(scope: InstallScope): JBLabel {
         val colors = when (scope) {
             InstallScope.USER -> JBColor(
-                java.awt.Color(0x4C, 0xAF, 0x50),
-                java.awt.Color(0x66, 0xBB, 0x6A)
+                Color(0x6E, 0xCB, 0x8B),
+                Color(0x6E, 0xCB, 0x8B)
             )
             InstallScope.PROJECT -> JBColor(
-                java.awt.Color(0x21, 0x96, 0xF3),
-                java.awt.Color(0x42, 0xA5, 0xF5)
+                Color(0x7C, 0xB3, 0xD4),
+                Color(0x7C, 0xB3, 0xD4)
             )
             InstallScope.LOCAL -> JBColor(
-                java.awt.Color(0xFF, 0x98, 0x00),
-                java.awt.Color(0xFF, 0xB7, 0x4D)
+                Color(0xF5, 0xA6, 0x23),
+                Color(0xF5, 0xA6, 0x23)
             )
         }
         return JBLabel(scope.displayName.substringAfter("Install "))
@@ -412,7 +414,7 @@ class PluginManagerDialog(
                 foreground = colors
                 font = font.deriveFont(Font.BOLD, font.size2D - 1f)
                 border = BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(colors, 1),
+                    RoundedBorder(colors),
                     JBUI.Borders.empty(0, 4, 0, 4)
                 )
             }
@@ -421,7 +423,7 @@ class PluginManagerDialog(
     private fun createAvailablePluginCard(plugin: PluginInfo): JPanel {
         val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(JBColor.border(), 1),
+                RoundedBorder(JBColor.border()),
                 JBUI.Borders.empty(6, 10, 6, 10)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 50)
@@ -493,7 +495,7 @@ class PluginManagerDialog(
     ): JPanel {
         val card = JPanel(BorderLayout(JBUI.scale(8), 0)).apply {
             border = BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(JBColor.border(), 1),
+                RoundedBorder(JBColor.border()),
                 JBUI.Borders.empty(8, 12, 8, 12)
             )
             maximumSize = Dimension(Int.MAX_VALUE, 50)
@@ -534,7 +536,7 @@ class PluginManagerDialog(
 
     private fun loadPlugins() {
         setPluginsStatus("Loading plugins...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommand(listOf("plugins", "list"))
 
@@ -560,7 +562,7 @@ class PluginManagerDialog(
     private fun installPlugin(name: String, scope: InstallScope) {
         setPluginsStatus("Installing '$name'...")
         showRestartBanner()
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val args = mutableListOf("plugins", "install", name)
             when (scope) {
@@ -587,7 +589,7 @@ class PluginManagerDialog(
         val action = if (enable) "enable" else "disable"
         setPluginsStatus("${action.replaceFirstChar { it.uppercase() }}ing '$name'...")
         showRestartBanner()
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("plugins", action, name)
@@ -609,7 +611,7 @@ class PluginManagerDialog(
 
     private fun loadMarketplaces() {
         setMarketplacesStatus("Loading marketplaces...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommand(
                 listOf("plugins", "marketplaces", "list")
@@ -634,7 +636,7 @@ class PluginManagerDialog(
 
     private fun addMarketplace(source: String) {
         setMarketplacesStatus("Adding marketplace '$source'...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("plugins", "marketplaces", "add", source)
@@ -655,7 +657,7 @@ class PluginManagerDialog(
 
     private fun refreshMarketplace(url: String) {
         setMarketplacesStatus("Refreshing marketplace...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("plugins", "marketplaces", "refresh", url)
@@ -685,7 +687,7 @@ class PluginManagerDialog(
         if (confirmed != Messages.OK) return
 
         setMarketplacesStatus("Removing marketplace...")
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val result = cliManager.runCliCommandWithExitCode(
                 listOf("plugins", "marketplaces", "remove", url)

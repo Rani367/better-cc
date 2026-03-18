@@ -50,6 +50,8 @@ class ClaudeSettingsConfigurable : Configurable {
             c.editorFontFamilyField.text != s.editorFontFamily ||
             (c.editorFontSizeField.text.toIntOrNull() ?: 12) !=
                 s.editorFontSize ||
+            c.enableIdeContextCheckbox.isSelected !=
+                s.enableIdeContext ||
             c.getEnvironmentVariables() != s.environmentVariables.toMap()
     }
 
@@ -78,6 +80,7 @@ class ClaudeSettingsConfigurable : Configurable {
         s.chatFontSize = c.chatFontSizeField.text.toIntOrNull() ?: 13
         s.editorFontFamily = c.editorFontFamilyField.text
         s.editorFontSize = c.editorFontSizeField.text.toIntOrNull() ?: 12
+        s.enableIdeContext = c.enableIdeContextCheckbox.isSelected
         s.environmentVariables = c.getEnvironmentVariables().toMutableMap()
 
         s.fireSettingsChanged()
@@ -101,6 +104,7 @@ class ClaudeSettingsConfigurable : Configurable {
         c.enableNewConversationShortcutCheckbox.isSelected =
             s.enableNewConversationShortcut
         c.usePythonEnvironmentCheckbox.isSelected = s.usePythonEnvironment
+        c.enableIdeContextCheckbox.isSelected = s.enableIdeContext
         c.claudeProcessWrapperField.text = s.claudeProcessWrapper
         c.chatFontFamilyField.text = s.chatFontFamily
         c.chatFontSizeField.text = s.chatFontSize.toString()
@@ -133,6 +137,7 @@ class ClaudeSettingsConfigurable : Configurable {
             defaults.enableNewConversationShortcut
         c.usePythonEnvironmentCheckbox.isSelected =
             defaults.usePythonEnvironment
+        c.enableIdeContextCheckbox.isSelected = defaults.enableIdeContext
         c.claudeProcessWrapperField.text = defaults.claudeProcessWrapper
         c.chatFontFamilyField.text = defaults.chatFontFamily
         c.chatFontSizeField.text = defaults.chatFontSize.toString()

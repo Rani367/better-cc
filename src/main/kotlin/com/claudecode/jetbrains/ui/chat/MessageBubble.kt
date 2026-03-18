@@ -65,7 +65,7 @@ class MessageBubble(private val message: ChatMessage) : JPanel(BorderLayout()) {
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g2.color = bubbleBackground
         val insets = insets
-        val arc = JBUI.scale(12)
+        val arc = com.claudecode.jetbrains.ui.theme.ClaudeCornerRadius.LARGE
         g2.fillRoundRect(
             insets.left, insets.top,
             width - insets.left - insets.right,
@@ -84,16 +84,17 @@ class MessageBubble(private val message: ChatMessage) : JPanel(BorderLayout()) {
     companion object {
         private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 
-        private val USER_BG = JBColor(Color(0xDB, 0xE9, 0xF7), Color(0x1E, 0x3A, 0x5F))
-        private val ASSISTANT_BG = JBColor(Color(0xE8, 0xE8, 0xE8), Color(0x36, 0x39, 0x3D))
-        private val ERROR_BG = JBColor(Color(0xFD, 0xE0, 0xE0), Color(0x50, 0x20, 0x20))
+        // Warm Ember palette
+        private val USER_BG = JBColor(Color(0xF0, 0xE4, 0xDA), Color(0x30, 0x28, 0x24))
+        private val ASSISTANT_BG = JBColor(Color(0xED, 0xE8, 0xE0), Color(0x2E, 0x2E, 0x32))
+        private val ERROR_BG = JBColor(Color(0xF7, 0xDD, 0xDA), Color(0x40, 0x20, 0x22))
 
-        private val USER_NAME_COLOR = JBColor(Color(0x1A, 0x56, 0xB0), Color(0x6B, 0xB8, 0xFF))
-        private val ASSISTANT_NAME_COLOR = JBColor(Color(0xC4, 0x6E, 0x00), Color(0xE8, 0xA5, 0x50))
-        private val ERROR_NAME_COLOR = JBColor(Color(0xC6, 0x28, 0x28), Color(0xFF, 0x6B, 0x6B))
+        private val USER_NAME_COLOR = JBColor(Color(0xD4, 0x62, 0x3A), Color(0xE8, 0x73, 0x4A))
+        private val ASSISTANT_NAME_COLOR = JBColor(Color(0xC9, 0x8B, 0x1A), Color(0xF5, 0xA6, 0x23))
+        private val ERROR_NAME_COLOR = JBColor(Color(0xC6, 0x28, 0x28), Color(0xE0, 0x6C, 0x75))
 
-        private val SYSTEM_BG = JBColor(Color(0xF5, 0xF5, 0xF5), Color(0x38, 0x3A, 0x3D))
-        private val SYSTEM_NAME_COLOR = JBColor(Color(0x66, 0x66, 0x66), Color(0x80, 0x80, 0x80))
+        private val SYSTEM_BG = JBColor(Color(0xFA, 0xF8, 0xF5), Color(0x2A, 0x2A, 0x2E))
+        private val SYSTEM_NAME_COLOR = JBColor(Color(0x8A, 0x7E, 0x74), Color(0x9A, 0x94, 0x90))
 
         private fun backgroundForSender(sender: MessageSender): JBColor = when (sender) {
             MessageSender.USER -> USER_BG

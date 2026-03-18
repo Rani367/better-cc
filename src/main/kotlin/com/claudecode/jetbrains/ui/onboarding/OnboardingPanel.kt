@@ -68,24 +68,28 @@ class OnboardingPanel(
     }
 
     private companion object {
+        // Warm Ember palette
         private val HEADER_BG = JBColor(
-            Color(0xE3, 0xF2, 0xFD),
-            Color(0x1A, 0x3A, 0x52)
+            Color(0xF0, 0xE4, 0xDA),
+            Color(0x30, 0x28, 0x24)
         )
         private val ITEM_HOVER_BG = JBColor(
-            Color(0xF5, 0xF5, 0xF5),
-            Color(0x35, 0x37, 0x39)
+            Color(0xED, 0xE8, 0xE0),
+            Color(0x2E, 0x2E, 0x32)
         )
         private val CHECK_COLOR = JBColor(
-            Color(0x4C, 0xAF, 0x50),
-            Color(0x66, 0xBB, 0x6A)
+            Color(0x6E, 0xCB, 0x8B),
+            Color(0x6E, 0xCB, 0x8B)
         )
-        private val PENDING_COLOR = JBColor.GRAY
+        private val PENDING_COLOR = JBColor(
+            Color(0x9A, 0x94, 0x90),
+            Color(0x9A, 0x94, 0x90)
+        )
     }
 
     init {
         border = BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(JBColor.border()),
+            com.claudecode.jetbrains.ui.common.RoundedBorder(JBColor.border()),
             JBUI.Borders.empty(0)
         )
 
@@ -240,8 +244,8 @@ class OnboardingPanel(
                 foreground = JBColor.namedColor(
                     "Link.activeForeground",
                     JBColor(
-                        Color(0x1A, 0x73, 0xE8),
-                        Color(0x6B, 0xB8, 0xFF)
+                        Color(0xD4, 0x62, 0x3A),
+                        Color(0x7C, 0xB3, 0xD4)
                     )
                 )
                 cursor = Cursor.getPredefinedCursor(

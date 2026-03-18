@@ -20,6 +20,7 @@ import com.claudecode.jetbrains.cli.TextDelta
 import com.claudecode.jetbrains.cli.ThinkingBlock
 import com.claudecode.jetbrains.cli.ThinkingDelta
 import com.claudecode.jetbrains.cli.ToolUseBlock
+import com.claudecode.jetbrains.context.IdeContextAggregator
 import com.claudecode.jetbrains.services.ClaudeState
 import com.claudecode.jetbrains.services.ClaudeStateListener
 import com.claudecode.jetbrains.services.ClaudeStateService
@@ -43,6 +44,7 @@ import com.claudecode.jetbrains.ui.sessions.SessionTabManager
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -110,6 +112,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
     private val conversationMessages =
         mutableListOf<ChatMessage>()
 
+    // Message queue: messages sent while Claude is busy
+    private val messageQueue = ArrayDeque<String>()
+
     // Teleport location: "sidebar" or "tab"
     private var location: String = "sidebar"
 
@@ -152,7 +157,11 @@ class ChatToolWindow(private val project: Project) : Disposable {
         // Wire send message handler (from JCEF input)
         messageList.setSendMessageHandler { text ->
             ApplicationManager.getApplication().invokeLater {
-                if (!project.isDisposed) {
+                if (project.isDisposed) return@invokeLater
+                if (stateService.state != ClaudeState.READY) {
+                    // Claude is busy — queue the message
+                    messageQueue.addLast(text)
+                } else {
                     sendMessage(text)
                 }
             }
@@ -179,7 +188,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
             }
         }
         messageList.setSessionRenameHandler { sessionId, newTitle ->
-            ApplicationManager.getApplication().executeOnPooledThread {
+            AppExecutorUtil.getAppExecutorService().execute {
                 SessionManager.getInstance(project).renameSession(sessionId, newTitle)
                 ApplicationManager.getApplication().invokeLater {
                     if (!project.isDisposed) showSessionHistory()
@@ -187,7 +196,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
             }
         }
         messageList.setSessionDeleteHandler { sessionId ->
-            ApplicationManager.getApplication().executeOnPooledThread {
+            AppExecutorUtil.getAppExecutorService().execute {
                 SessionManager.getInstance(project).removeSession(sessionId)
                 ApplicationManager.getApplication().invokeLater {
                     if (!project.isDisposed) showSessionHistory()
@@ -324,7 +333,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         pushPickerOptions()
 
         // Fetch git branch in background
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val tracker =
                 com.claudecode.jetbrains.context.GitBranchTracker
                     .getInstance(project)
@@ -411,6 +420,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         isResumedSession = false
         messageIndexCounter = 0
         conversationMessages.clear()
+        messageQueue.clear()
 
         ApplicationManager.getApplication().invokeLater {
             if (project.isDisposed) return@invokeLater
@@ -734,7 +744,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
         )
 
         // Model options (async from CLI)
-        ApplicationManager.getApplication().executeOnPooledThread {
+        AppExecutorUtil.getAppExecutorService().execute {
             val cliManager = ClaudeCliManager.getInstance(project)
             val cliModels = cliManager.fetchModels()
             val modelOptions = mutableListOf(
@@ -828,7 +838,6 @@ class ChatToolWindow(private val project: Project) : Disposable {
         )
         conversationMessages.add(userMessage)
         messageList.addMessage(userMessage)
-        messageList.setInputEnabled(false)
         messageList.showThinking(true)
         stateService.setState(ClaudeState.THINKING)
 
@@ -878,9 +887,27 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 streamingMessageId = assistantMessage.id
                 accumulatedText.clear()
 
+                // Enrich with IDE context if enabled
+                val enrichedText = if (
+                    ClaudeSettings.getInstance().enableIdeContext
+                ) {
+                    val ideContext = try {
+                        IdeContextAggregator.getInstance(project)
+                            .gatherContext()
+                    } catch (e: Exception) {
+                        logger.debug(
+                            "Failed to gather IDE context", e
+                        )
+                        null
+                    }
+                    if (ideContext != null) text + ideContext else text
+                } else {
+                    text
+                }
+
                 // Send the message
                 try {
-                    process.sendMessage(text)
+                    process.sendMessage(enrichedText)
                 } catch (e: Exception) {
                     if (project.isDisposed) return@launch
                     logger.warn("Failed to send message to Claude", e)
@@ -895,6 +922,15 @@ class ChatToolWindow(private val project: Project) : Disposable {
                 )
             }
         }
+    }
+
+    /**
+     * Drain the message queue: if there are queued messages, send the next one.
+     * Called after Claude finishes processing a response.
+     */
+    private fun drainMessageQueue() {
+        val next = messageQueue.removeFirstOrNull() ?: return
+        sendMessage(next)
     }
 
     @Suppress("LongMethod")
@@ -1288,6 +1324,9 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
             messageList.setInputEnabled(true)
             messageList.focusInput()
+
+            // Drain queued messages
+            drainMessageQueue()
         }
     }
 
@@ -1324,12 +1363,18 @@ class ChatToolWindow(private val project: Project) : Disposable {
                         )
                     )
                 }
+
+                // Drain queued messages
+                drainMessageQueue()
             }
         } else {
             ApplicationManager.getApplication().invokeLater {
                 if (project.isDisposed) return@invokeLater
                 messageList.showThinking(false)
                 messageList.setInputEnabled(true)
+
+                // Drain queued messages
+                drainMessageQueue()
             }
         }
 

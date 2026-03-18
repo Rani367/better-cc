@@ -131,6 +131,39 @@ class DiagnosticsProvider(private val project: Project) {
         )
     }
 
+    /**
+     * Collect diagnostics across all open editor files in the project.
+     */
+    fun getProjectDiagnostics(): Map<String, List<DiagnosticEntry>> {
+        if (project.isDisposed) return emptyMap()
+
+        return ReadAction.compute<Map<String, List<DiagnosticEntry>>,
+            RuntimeException> {
+            val editorManager = com.intellij.openapi.fileEditor
+                .FileEditorManager.getInstance(project)
+            val result = mutableMapOf<String, List<DiagnosticEntry>>()
+            for (file in editorManager.openFiles) {
+                val diagnostics = collectDiagnostics(file)
+                if (diagnostics.isNotEmpty()) {
+                    val relativePath = project.basePath?.let { base ->
+                        file.path.removePrefix(base).removePrefix("/")
+                    } ?: file.path
+                    result[relativePath] = diagnostics
+                }
+            }
+            result
+        }
+    }
+
+    /**
+     * Get all errors across all open editor files.
+     */
+    fun getAllErrors(): Map<String, List<DiagnosticEntry>> {
+        return getProjectDiagnostics().mapValues { (_, entries) ->
+            entries.filter { it.severity == "ERROR" }
+        }.filterValues { it.isNotEmpty() }
+    }
+
     companion object {
         fun getInstance(project: Project): DiagnosticsProvider =
             project.getService(DiagnosticsProvider::class.java)
