@@ -1,17 +1,16 @@
 package com.claudecode.jetbrains.context
 
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.lang.annotation.HighlightSeverity
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.impl.DocumentMarkupModel
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.codeInsight.daemon.impl.DaemonCodeAnalyzerImpl
-import com.intellij.codeInsight.daemon.impl.HighlightInfo
-import com.intellij.openapi.application.ReadAction
+import java.util.concurrent.Callable
 
 data class DiagnosticEntry(
     val filePath: String,
@@ -33,9 +32,9 @@ class DiagnosticsProvider(private val project: Project) {
     fun getDiagnostics(virtualFile: VirtualFile): List<DiagnosticEntry> {
         if (project.isDisposed) return emptyList()
 
-        return ReadAction.compute<List<DiagnosticEntry>, RuntimeException> {
+        return ReadAction.nonBlocking(Callable {
             collectDiagnostics(virtualFile)
-        }
+        }).executeSynchronously()
     }
 
     /**
@@ -92,9 +91,12 @@ class DiagnosticsProvider(private val project: Project) {
         } ?: virtualFile.path
 
         return try {
-            val highlights = DaemonCodeAnalyzerImpl.getHighlights(
-                document, null, project
-            )
+            val markupModel = DocumentMarkupModel.forDocument(
+                document, project, false
+            ) ?: return emptyList()
+            val highlights = markupModel.allHighlighters.mapNotNull { highlighter ->
+                highlighter.errorStripeTooltip as? HighlightInfo
+            }
             highlights.mapNotNull { info ->
                 mapHighlightInfo(info, document, filePath)
             }
@@ -112,7 +114,7 @@ class DiagnosticsProvider(private val project: Project) {
         val severity = when {
             info.severity == HighlightSeverity.ERROR -> "ERROR"
             info.severity == HighlightSeverity.WARNING -> "WARNING"
-            info.severity.myVal >= HighlightSeverity.WEAK_WARNING.myVal ->
+            info.severity >= HighlightSeverity.WEAK_WARNING ->
                 "WEAK_WARNING"
             else -> return null // skip info-level
         }
@@ -137,8 +139,7 @@ class DiagnosticsProvider(private val project: Project) {
     fun getProjectDiagnostics(): Map<String, List<DiagnosticEntry>> {
         if (project.isDisposed) return emptyMap()
 
-        return ReadAction.compute<Map<String, List<DiagnosticEntry>>,
-            RuntimeException> {
+        return ReadAction.nonBlocking(Callable {
             val editorManager = com.intellij.openapi.fileEditor
                 .FileEditorManager.getInstance(project)
             val result = mutableMapOf<String, List<DiagnosticEntry>>()
@@ -152,7 +153,7 @@ class DiagnosticsProvider(private val project: Project) {
                 }
             }
             result
-        }
+        }).executeSynchronously()
     }
 
     /**

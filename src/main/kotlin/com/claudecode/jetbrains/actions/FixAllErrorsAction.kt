@@ -7,17 +7,16 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindowManager
+import java.util.concurrent.Callable
 
 class FixAllErrorsAction : AnAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        val allIssues = ReadAction.compute<
-            Map<String, List<com.claudecode.jetbrains.context.DiagnosticEntry>>,
-            RuntimeException> {
+        val allIssues = ReadAction.nonBlocking(Callable {
             DiagnosticsProvider.getInstance(project).getProjectDiagnostics()
-        }
+        }).executeSynchronously()
 
         if (allIssues.isEmpty()) {
             com.intellij.openapi.ui.Messages.showInfoMessage(

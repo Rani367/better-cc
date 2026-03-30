@@ -34,12 +34,13 @@ class ClaudeSettingsComponent {
     // ── Fields ───────────────────────────────────────────────────
 
     val claudeCommandField = TextFieldWithBrowseButton().apply {
-        @Suppress("DEPRECATION")
         addBrowseFolderListener(
-            "Select Claude CLI Executable",
-            "Choose the path to the Claude CLI executable",
             null,
-            FileChooserDescriptorFactory.createSingleFileDescriptor()
+            FileChooserDescriptorFactory.createSingleFileNoJarsDescriptor()
+                .withTitle("Select Claude CLI Executable")
+                .withDescription(
+                    "Choose the path to the Claude CLI executable"
+                )
         )
         toolTipText = "Path to the Claude CLI executable. " +
             "Default: 'claude' (found on PATH)."

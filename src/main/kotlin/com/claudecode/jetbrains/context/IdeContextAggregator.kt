@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import java.util.concurrent.Callable
 
 /**
  * Aggregates IDE context (diagnostics, file info, git state) into
@@ -48,10 +49,10 @@ class IdeContextAggregator(private val project: Project) {
     }
 
     private fun gatherFileContext(): String? {
-        val fileContext = ReadAction.compute<FileContext?, RuntimeException> {
+        val fileContext = ReadAction.nonBlocking(Callable {
             FileContextProvider.getInstance(project)
                 .getCurrentFileContext()
-        } ?: return null
+        }).executeSynchronously() ?: return null
 
         return buildString {
             append("Active file: `${fileContext.relativePath}`")
@@ -72,15 +73,14 @@ class IdeContextAggregator(private val project: Project) {
     }
 
     private fun gatherDiagnosticsContext(): String? {
-        val diagnostics = ReadAction.compute<List<DiagnosticEntry>,
-            RuntimeException> {
+        val diagnostics = ReadAction.nonBlocking(Callable {
             val editor = FileEditorManager.getInstance(project)
-                .selectedTextEditor ?: return@compute emptyList()
+                .selectedTextEditor ?: return@Callable emptyList()
             val file = editor.virtualFile
-                ?: return@compute emptyList()
+                ?: return@Callable emptyList()
             DiagnosticsProvider.getInstance(project)
                 .getDiagnostics(file)
-        }
+        }).executeSynchronously()
 
         if (diagnostics.isEmpty()) return null
 
