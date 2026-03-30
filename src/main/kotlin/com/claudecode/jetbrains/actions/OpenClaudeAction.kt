@@ -8,7 +8,7 @@ import com.intellij.openapi.wm.ToolWindowManager
 class OpenClaudeAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Claude Code") ?: return
+        val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Better Claude Code") ?: return
         toolWindow.activate {
             project.getUserData(ChatToolWindow.KEY)?.focusInput()
         }

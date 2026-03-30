@@ -537,7 +537,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
     fun exportSessionState(): SessionState {
         return SessionState(
             sessionId = currentSessionId,
-            sessionTitle = "Claude Code",
+            sessionTitle = "Better Claude Code",
             conversationHistory = conversationMessages.toList(),
             messageIndexCounter = messageIndexCounter
         )
@@ -588,7 +588,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
                     val toolWindow =
                         com.intellij.openapi.wm.ToolWindowManager
                             .getInstance(project)
-                            .getToolWindow("Claude Code")
+                            .getToolWindow("Better Claude Code")
                     toolWindow?.activate(null)
                 }
                 // Close the tab if we're in one
@@ -662,7 +662,7 @@ class ChatToolWindow(private val project: Project) : Disposable {
 
     private fun openSettings() {
         com.intellij.openapi.options.ShowSettingsUtil.getInstance()
-            .showSettingsDialog(project, "Claude Code")
+            .showSettingsDialog(project, "Better Claude Code")
     }
 
     private fun modelDisplayText(model: String): String {

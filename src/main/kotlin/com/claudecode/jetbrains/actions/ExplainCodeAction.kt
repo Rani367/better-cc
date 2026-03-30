@@ -57,7 +57,7 @@ class ExplainCodeAction : AnAction() {
 
     private fun openClaudeAndSend(project: Project, prompt: String) {
         val toolWindow = ToolWindowManager.getInstance(project)
-            .getToolWindow("Claude Code") ?: return
+            .getToolWindow("Better Claude Code") ?: return
         toolWindow.activate {
             val chatWindow = project.getUserData(ChatToolWindow.KEY)
             chatWindow?.sendPrefilledMessage(prompt)

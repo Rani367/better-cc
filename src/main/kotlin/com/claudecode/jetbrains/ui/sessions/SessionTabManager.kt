@@ -65,9 +65,9 @@ class SessionTabManager(
         val tabId = UUID.randomUUID().toString()
         val number = nextTabNumber++
         val displayName = if (number == 1) {
-            "Claude Code"
+            "Better Claude Code"
         } else {
-            "Claude Code ($number)"
+            "Better Claude Code ($number)"
         }
 
         val file = ClaudeVirtualFile(tabId, displayName)

@@ -13,7 +13,7 @@ class ClaudeSettingsConfigurable : Configurable {
 
     private var component: ClaudeSettingsComponent? = null
 
-    override fun getDisplayName(): String = "Claude Code"
+    override fun getDisplayName(): String = "Better Claude Code"
 
     override fun createComponent(): JComponent {
         val c = ClaudeSettingsComponent()

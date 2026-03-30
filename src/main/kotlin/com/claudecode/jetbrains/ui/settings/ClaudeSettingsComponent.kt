@@ -94,7 +94,7 @@ class ClaudeSettingsComponent {
                 return this
             }
         }
-        toolTipText = "Where the Claude Code panel opens: " +
+        toolTipText = "Where the Better Claude Code panel opens: " +
             "as a sidebar tool window or as an editor tab."
     }
 
@@ -135,7 +135,7 @@ class ClaudeSettingsComponent {
     val useTerminalCheckbox = JBCheckBox(
         "Use terminal mode"
     ).apply {
-        toolTipText = "Open Claude Code in a terminal tab " +
+        toolTipText = "Open Better Claude Code in a terminal tab " +
             "instead of the native UI."
     }
 

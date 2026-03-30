@@ -21,7 +21,7 @@ class ClaudeCodePlugin : ProjectActivity {
             val descriptor = PluginManagerCore.getPlugin(pluginId)
             if (descriptor != null) {
                 logger.info(
-                    "Claude Code plugin version: ${descriptor.version}"
+                    "Better Claude Code plugin version: ${descriptor.version}"
                 )
             }
         } catch (e: Exception) {
@@ -34,7 +34,7 @@ class ClaudeCodePlugin : ProjectActivity {
     }
 
     override suspend fun execute(project: Project) {
-        logger.info("Claude Code plugin loaded for project: ${project.name}")
+        logger.info("Better Claude Code plugin loaded for project: ${project.name}")
         logPluginVersion()
 
         val manager = ClaudeCliManager.getInstance(project)
@@ -45,12 +45,12 @@ class ClaudeCodePlugin : ProjectActivity {
         }
 
         val notificationGroup = NotificationGroupManager.getInstance()
-            .getNotificationGroup("Claude Code Notifications")
+            .getNotificationGroup("Better Claude Code Notifications")
 
         when (manager.getAuthStatus()) {
             AuthStatus.CLI_NOT_FOUND -> {
                 notificationGroup.createNotification(
-                    "Claude Code",
+                    "Better Claude Code",
                     "Claude Code CLI not found. Install it from https://claude.ai/install.sh",
                     NotificationType.ERROR
                 )
@@ -62,7 +62,7 @@ class ClaudeCodePlugin : ProjectActivity {
 
             AuthStatus.NOT_AUTHENTICATED -> {
                 notificationGroup.createNotification(
-                    "Claude Code",
+                    "Better Claude Code",
                     "Claude Code CLI found but not authenticated. Run 'claude auth login' in your terminal.",
                     NotificationType.WARNING
                 )
@@ -74,8 +74,8 @@ class ClaudeCodePlugin : ProjectActivity {
                 val key = "com.claudecode.hasShownReadyNotification"
                 if (!properties.getBoolean(key, false)) {
                     notificationGroup.createNotification(
-                        "Claude Code",
-                        "Claude Code ready",
+                        "Better Claude Code",
+                        "Better Claude Code ready",
                         NotificationType.INFORMATION
                     )
                         .notify(project)

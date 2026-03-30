@@ -16,7 +16,7 @@ class NewConversationAction : AnAction() {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val toolWindow = ToolWindowManager.getInstance(project)
-            .getToolWindow("Claude Code") ?: return
+            .getToolWindow("Better Claude Code") ?: return
         val content = toolWindow.contentManager.selectedContent
             ?: return
         val chatWindow = content.component as? ChatToolWindow

@@ -182,7 +182,7 @@ class CodeBlockRenderer(
                 "openConfig" -> {
                     ApplicationManager.getApplication().invokeLater {
                         ShowSettingsUtil.getInstance()
-                            .showSettingsDialog(project, "Claude Code")
+                            .showSettingsDialog(project, "Better Claude Code")
                     }
                 }
                 "openConfigFile" -> {
@@ -444,7 +444,7 @@ class CodeBlockRenderer(
                 else -> NotificationType.INFORMATION
             }
             NotificationGroupManager.getInstance()
-                .getNotificationGroup("Claude Code Notifications")
+                .getNotificationGroup("Better Claude Code Notifications")
                 .createNotification(message, notifType)
                 .notify(project)
         }

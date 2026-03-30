@@ -15,8 +15,8 @@ class SessionTabTest {
 
     @Test
     fun `ClaudeVirtualFile has correct properties`() {
-        val file = ClaudeVirtualFile("tab-1", "Claude Code")
-        assertEquals("Claude Code", file.name)
+        val file = ClaudeVirtualFile("tab-1", "Better Claude Code")
+        assertEquals("Better Claude Code", file.name)
         assertEquals("claude-code://tab-1", file.path)
         assertEquals("tab-1", file.tabId)
         assertFalse(file.isDirectory)
@@ -50,17 +50,17 @@ class SessionTabTest {
 
     @Test
     fun `ClaudeVirtualFile display name can be changed`() {
-        val file = ClaudeVirtualFile("tab-1", "Claude Code")
-        assertEquals("Claude Code", file.name)
+        val file = ClaudeVirtualFile("tab-1", "Better Claude Code")
+        assertEquals("Better Claude Code", file.name)
         file.setDisplayName("Fix the bug in parser")
         assertEquals("Fix the bug in parser", file.name)
     }
 
     @Test
     fun `ClaudeVirtualFile equality is based on tabId`() {
-        val file1 = ClaudeVirtualFile("tab-1", "Claude Code")
-        val file2 = ClaudeVirtualFile("tab-1", "Claude Code (2)")
-        val file3 = ClaudeVirtualFile("tab-2", "Claude Code")
+        val file1 = ClaudeVirtualFile("tab-1", "Better Claude Code")
+        val file2 = ClaudeVirtualFile("tab-1", "Better Claude Code (2)")
+        val file3 = ClaudeVirtualFile("tab-2", "Better Claude Code")
 
         assertEquals(file1, file2)
         assertNotEquals(file1, file3)
@@ -106,14 +106,14 @@ class SessionTabTest {
     fun `tab numbering produces expected display names`() {
         // Simulate the naming logic from SessionTabManager
         val names = (1..5).map { number ->
-            if (number == 1) "Claude Code"
-            else "Claude Code ($number)"
+            if (number == 1) "Better Claude Code"
+            else "Better Claude Code ($number)"
         }
-        assertEquals("Claude Code", names[0])
-        assertEquals("Claude Code (2)", names[1])
-        assertEquals("Claude Code (3)", names[2])
-        assertEquals("Claude Code (4)", names[3])
-        assertEquals("Claude Code (5)", names[4])
+        assertEquals("Better Claude Code", names[0])
+        assertEquals("Better Claude Code (2)", names[1])
+        assertEquals("Better Claude Code (3)", names[2])
+        assertEquals("Better Claude Code (4)", names[3])
+        assertEquals("Better Claude Code (5)", names[4])
     }
 
     // ── TabStatus enum ──────────────────────────────────────

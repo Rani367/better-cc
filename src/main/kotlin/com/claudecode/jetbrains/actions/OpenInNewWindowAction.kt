@@ -33,7 +33,7 @@ class OpenInNewWindowAction : AnAction() {
         private fun openClaudeWindow(project: Project) {
             val chatPanel = ChatToolWindow(project)
 
-            val frame = JFrame("Claude Code").apply {
+            val frame = JFrame("Better Claude Code").apply {
                 defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
                 contentPane.layout = BorderLayout()
                 contentPane.add(chatPanel.getContent(), BorderLayout.CENTER)

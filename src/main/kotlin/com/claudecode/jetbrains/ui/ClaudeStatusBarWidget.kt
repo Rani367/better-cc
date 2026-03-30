@@ -22,7 +22,7 @@ import java.awt.event.MouseEvent
 class ClaudeStatusBarWidgetFactory : StatusBarWidgetFactory {
     override fun getId(): String = WIDGET_ID
 
-    override fun getDisplayName(): String = "Claude Code"
+    override fun getDisplayName(): String = "Better Claude Code"
 
     override fun isAvailable(project: Project): Boolean = true
 
@@ -39,7 +39,7 @@ class ClaudeStatusBarWidgetFactory : StatusBarWidgetFactory {
 
 /**
  * Status bar widget that shows Claude Code state in the IDE bottom bar.
- * Displays "Claude Code" with status: Ready, Thinking..., or
+ * Displays "Better Claude Code" with status: Ready, Thinking..., or
  * Waiting for permission. Click to open/focus the Claude Code panel.
  */
 class ClaudeStatusBarWidget(
@@ -90,10 +90,10 @@ class ClaudeStatusBarWidget(
 
     override fun getTooltipText(): String {
         return when (currentState) {
-            ClaudeState.READY -> "Claude Code - Ready"
-            ClaudeState.THINKING -> "Claude Code - Processing your request..."
+            ClaudeState.READY -> "Better Claude Code - Ready"
+            ClaudeState.THINKING -> "Better Claude Code - Processing your request..."
             ClaudeState.WAITING_FOR_PERMISSION -> {
-                "Claude Code - Waiting for permission approval"
+                "Better Claude Code - Waiting for permission approval"
             }
         }
     }
@@ -102,7 +102,7 @@ class ClaudeStatusBarWidget(
         return Consumer {
             if (project.isDisposed) return@Consumer
             val toolWindow = ToolWindowManager.getInstance(project)
-                .getToolWindow("Claude Code") ?: return@Consumer
+                .getToolWindow("Better Claude Code") ?: return@Consumer
             toolWindow.activate {
                 project.getUserData(ChatToolWindow.KEY)?.focusInput()
             }

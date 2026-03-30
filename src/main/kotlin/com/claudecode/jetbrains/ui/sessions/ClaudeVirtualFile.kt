@@ -14,7 +14,7 @@ import java.io.OutputStream
  */
 class ClaudeVirtualFile(
     val tabId: String,
-    private var displayName: String = "Claude Code"
+    private var displayName: String = "Better Claude Code"
 ) : VirtualFile() {
 
     /** Tab status for visual indicators. */

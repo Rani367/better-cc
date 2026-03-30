@@ -59,7 +59,7 @@ class InsertFileRefAction : AnAction() {
 
         // Insert into Claude's input panel
         val toolWindow = ToolWindowManager.getInstance(project)
-            .getToolWindow("Claude Code") ?: return
+            .getToolWindow("Better Claude Code") ?: return
         toolWindow.activate {
             val chatToolWindow = project.getUserData(ChatToolWindow.KEY) ?: return@activate
             chatToolWindow.insertTextAtCursor(ref)

@@ -35,14 +35,14 @@ class OnboardingPanel(
         Milestone(
             id = "welcome",
             title = "Your AI coding partner",
-            description = "Claude Code is your AI pair programmer " +
+            description = "Better Claude Code is your AI pair programmer " +
                 "right inside JetBrains.",
             action = null
         ),
         Milestone(
             id = "open_claude",
-            title = "Open Claude Code",
-            description = "Open the Claude Code tool window " +
+            title = "Open Better Claude Code",
+            description = "Open the Better Claude Code tool window " +
                 "to start a conversation.",
             action = ::openClaudeToolWindow
         ),
@@ -99,7 +99,7 @@ class OnboardingPanel(
             isOpaque = true
             border = JBUI.Borders.empty(10, 12, 10, 12)
 
-            val titleLabel = JBLabel("Welcome to Claude Code").apply {
+            val titleLabel = JBLabel("Welcome to Better Claude Code").apply {
                 font = font.deriveFont(Font.BOLD, 14f)
             }
             add(titleLabel, BorderLayout.CENTER)
@@ -280,7 +280,7 @@ class OnboardingPanel(
 
     private fun openClaudeToolWindow() {
         val toolWindow = ToolWindowManager.getInstance(project)
-            .getToolWindow("Claude Code") ?: return
+            .getToolWindow("Better Claude Code") ?: return
         toolWindow.activate {
             markCompleted("open_claude")
         }
@@ -288,7 +288,7 @@ class OnboardingPanel(
 
     private fun focusInput() {
         val toolWindow = ToolWindowManager.getInstance(project)
-            .getToolWindow("Claude Code") ?: return
+            .getToolWindow("Better Claude Code") ?: return
         toolWindow.activate {
             project.getUserData(ChatToolWindow.KEY)?.focusInput()
             markCompleted("chat_with_claude")
@@ -301,7 +301,7 @@ class OnboardingPanel(
             // The sessions dropdown is triggered from the header in JCEF
             // We just focus the tool window so the user can click it
             val toolWindow = ToolWindowManager.getInstance(project)
-                .getToolWindow("Claude Code") ?: return
+                .getToolWindow("Better Claude Code") ?: return
             toolWindow.activate {
                 markCompleted("past_conversations")
             }

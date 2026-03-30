@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>com.claudecode.jetbrains</id>
-    <name>Claude Code</name>
-    <vendor>Claude Code Contributors</vendor>
+    <name>Better Claude Code</name>
+    <vendor>Better Claude Code Contributors</vendor>
 
     <description><![CDATA[
 <p>A native JetBrains IDE interface for <b>Claude Code</b> — Anthropic's AI coding assistant on the command line.</p>
@@ -34,15 +34,15 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <backgroundPostStartupActivity implementation="com.claudecode.jetbrains.ClaudeCodePlugin"/>
-        <notificationGroup id="Claude Code Notifications"
+        <notificationGroup id="Better Claude Code Notifications"
                            displayType="BALLOON"
-                           toolWindowId="Claude Code"/>
+                           toolWindowId="Better Claude Code"/>
         <applicationService serviceImplementation="com.claudecode.jetbrains.settings.ClaudeSettings"/>
         <applicationConfigurable
             parentId="tools"
             instance="com.claudecode.jetbrains.ui.settings.ClaudeSettingsConfigurable"
             id="com.claudecode.jetbrains.settings"
-            displayName="Claude Code"/>
+            displayName="Better Claude Code"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.ClaudeCliManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.cli.SessionManager"/>
         <projectService serviceImplementation="com.claudecode.jetbrains.context.DiagnosticsProvider"/>
@@ -61,30 +61,30 @@
             id="ClaudeCode.StatusBar"
             implementation="com.claudecode.jetbrains.ui.ClaudeStatusBarWidgetFactory"
             order="after encodingWidget"/>
-        <toolWindow id="Claude Code"
+        <toolWindow id="Better Claude Code"
                     anchor="right"
                     icon="/icons/claude.svg"
                     factoryClass="com.claudecode.jetbrains.ui.chat.ChatToolWindowFactory"/>
     </extensions>
 
     <actions>
-        <group id="ClaudeCode.ToolsMenu" text="Claude Code" popup="true"
+        <group id="ClaudeCode.ToolsMenu" text="Better Claude Code" popup="true"
                icon="/icons/claude.svg">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
             <action id="ClaudeCode.Open"
                     class="com.claudecode.jetbrains.actions.OpenClaudeAction"
-                    text="Open Claude Code"
-                    description="Open the Claude Code panel"
+                    text="Open Better Claude Code"
+                    description="Open the Better Claude Code panel"
                     icon="/icons/claude.svg"/>
             <action id="ClaudeCode.OpenInNewTab"
                     class="com.claudecode.jetbrains.actions.OpenInNewTabAction"
-                    text="Claude Code: Open in New Tab"
-                    description="Open a new Claude Code conversation in an editor tab"
+                    text="Better Claude Code: Open in New Tab"
+                    description="Open a new Better Claude Code conversation in an editor tab"
                     icon="/icons/claude.svg"/>
             <action id="ClaudeCode.OpenInNewWindow"
                     class="com.claudecode.jetbrains.actions.OpenInNewWindowAction"
-                    text="Claude Code: Open in New Window"
-                    description="Open Claude Code in a separate window"
+                    text="Better Claude Code: Open in New Window"
+                    description="Open Better Claude Code in a separate window"
                     icon="/icons/claude.svg"/>
             <action id="ClaudeCode.FixAllErrorsMenu"
                     class="com.claudecode.jetbrains.actions.FixAllErrorsAction"
@@ -94,16 +94,16 @@
         </group>
         <action id="ClaudeCode.ToggleFocus"
                 class="com.claudecode.jetbrains.actions.ToggleFocusAction"
-                text="Toggle Claude Code Panel"
-                description="Toggle focus between editor and Claude Code panel">
+                text="Toggle Better Claude Code Panel"
+                description="Toggle focus between editor and Better Claude Code panel">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl ESCAPE"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta ESCAPE"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta ESCAPE"/>
         </action>
         <action id="ClaudeCode.OpenInNewTabShortcut"
                 class="com.claudecode.jetbrains.actions.OpenInNewTabAction"
-                text="Open Claude Code in New Tab"
-                description="Open a new Claude Code conversation in an editor tab">
+                text="Open Better Claude Code in New Tab"
+                description="Open a new Better Claude Code conversation in an editor tab">
             <keyboard-shortcut keymap="$default"
                                first-keystroke="ctrl shift ESCAPE"/>
             <keyboard-shortcut keymap="Mac OS X"
@@ -114,22 +114,22 @@
         <action id="ClaudeCode.InsertFileRef"
                 class="com.claudecode.jetbrains.actions.InsertFileRefAction"
                 text="Insert File Reference in Claude"
-                description="Insert @file#line reference into Claude Code prompt">
+                description="Insert @file#line reference into Better Claude Code prompt">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt K"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta alt K"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta alt K"/>
         </action>
         <action id="ClaudeCode.NewConversation"
                 class="com.claudecode.jetbrains.actions.NewConversationAction"
-                text="Claude Code: New Conversation"
-                description="Start a new conversation in the current Claude Code panel">
+                text="Better Claude Code: New Conversation"
+                description="Start a new conversation in the current Better Claude Code panel">
             <keyboard-shortcut keymap="$default" first-keystroke="ctrl N"/>
             <keyboard-shortcut keymap="Mac OS X" first-keystroke="meta N"/>
             <keyboard-shortcut keymap="Mac OS X 10.5+" first-keystroke="meta N"/>
         </action>
 
         <!-- Editor right-click context menu actions -->
-        <group id="ClaudeCode.EditorPopupMenu" text="Claude Code" popup="true"
+        <group id="ClaudeCode.EditorPopupMenu" text="Better Claude Code" popup="true"
                icon="/icons/claude.svg">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
             <action id="ClaudeCode.AskClaude"
